@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "deexor64",email = "191124667+deexor64@users.noreply.github.com"},
 ]
-dependencies = []
+dependencies = ["fastapi[standard]>=0.141.1"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
@@ -16,4 +16,5 @@ distribution = false
 
 
 [tool.pdm.scripts]
-start = "python3 src/main.py"
+dev = "fastapi dev src/main.py"
+start = "fastapi run src/main.py"
