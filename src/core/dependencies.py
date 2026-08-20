@@ -1,0 +1,51 @@
+"""
+FastAPI dependency: extract and verify the Bearer token via Supabase Auth.
+
+supabase.auth.get_user(jwt) validates the token against Supabase's JWKS
+and returns the authenticated user. No local JWT secret needed.
+"""
+
+from fastapi import HTTPException, Request, status
+
+
+def get_current_user(request: Request) -> dict:
+    """
+    Reads the Bearer token from the Authorization header, validates it
+    with Supabase Auth, and returns the user dict.
+
+    Returns the raw user object from Supabase:
+        {
+            "id": "<uuid>",
+            "email": "<email>",
+            "app_metadata": {...},
+            "user_metadata": {...},
+            ...
+        }
+    """
+    from db.client import supabase
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = auth_header.removeprefix("Bearer ").strip()
+
+    try:
+        response = supabase.auth.get_user(token)
+        if not response or not response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return {"user": response.user, "token": token}
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
