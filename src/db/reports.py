@@ -35,11 +35,70 @@ Table DDL (run once in Supabase SQL editor):
 
 from datetime import datetime
 
-from db.client import supabase
+from core.client import supabase
 
 
-def create_report(data: dict) -> dict:
-    """Insert a new report row. Returns the created record."""
+def add_report_to_queue(
+    title: str,
+    description: str | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    media_urls: list[str] | None = None,
+    contact_email: str | None = None,
+    contact_phone: str | None = None,
+):
+    response = (
+        supabase.schema("pgmq_public")
+        .rpc(
+            "send",
+            {
+                "queue_name": "reports",
+                "message": {
+                    "title": title,
+                    "description": description,
+                    "category": category,
+                    "severity": severity,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "media_urls": media_urls,
+                    "contact_email": contact_email,
+                    "contact_phone": contact_phone,
+                },
+                "sleep_seconds": 30,
+            },
+        )
+        .execute()
+    )
+
+    return response
+
+
+# Used by the background worker
+def create_report(
+    title: str,
+    description: str | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    media_urls: list[str] | None = None,
+    contact_email: str | None = None,
+    contact_phone: str | None = None,
+) -> dict:
+    data = {
+        "title": title,
+        "description": description,
+        "category": category,
+        "severity": severity,
+        "latitude": latitude,
+        "longitude": longitude,
+        "media_urls": media_urls,
+        "contact_email": contact_email,
+        "contact_phone": contact_phone,
+    }
+    data = {k: v for k, v in data.items() if v is not None}
     response = supabase.table("reports").insert(data).execute()
     return response.data[0]
 
@@ -92,8 +151,7 @@ def get_all_reports(
 
     offset = (page - 1) * page_size
     response = (
-        query
-        .order("submitted_at", desc=True)
+        query.order("submitted_at", desc=True)
         .range(offset, offset + page_size - 1)
         .execute()
     )

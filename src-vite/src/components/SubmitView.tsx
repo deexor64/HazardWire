@@ -5,6 +5,7 @@ import { CATEGORY_ICON } from '../utils'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect } from 'react'
+import { uploadMedia } from '../supabase'
 
 const CATEGORIES: ReportCategory[] = ['road','drainage','water','electricity','garbage','environment','animals','accident','crime','other']
 const SEVERITIES: ReportSeverity[] = ['low','medium','high','critical']
@@ -33,6 +34,7 @@ export default function SubmitView() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [files, setFiles] = useState<File[]>([])
 
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
@@ -68,6 +70,16 @@ export default function SubmitView() {
     setSubmitting(true)
     setError(null)
     try {
+      const media_urls: string[] = []
+      
+      // Upload files first if any
+      if (files.length > 0) {
+        for (const file of files) {
+          const url = await uploadMedia(file)
+          media_urls.push(url)
+        }
+      }
+
       const body: any = {
         title: form.title, description: form.description,
         category: form.category, severity: form.severity,
@@ -76,6 +88,7 @@ export default function SubmitView() {
       if (form.longitude) body.longitude = form.longitude
       if (form.contact_email) body.contact_email = form.contact_email
       if (form.contact_phone) body.contact_phone = form.contact_phone
+      if (media_urls.length > 0) body.media_urls = media_urls
 
       const res: any = await submitReport(body)
       setSuccess(res.data?.id ?? 'submitted')
@@ -87,7 +100,7 @@ export default function SubmitView() {
     }
   }
 
-  if (step === 4) return <SuccessScreen reportId={success!} onReset={() => { setStep(1); setForm({ title:'',description:'',category:'road',severity:'medium',latitude:undefined,longitude:undefined,contact_email:'',contact_phone:'' }); setSuccess(null) }} />
+  if (step === 4) return <SuccessScreen reportId={success!} onReset={() => { setStep(1); setForm({ title:'',description:'',category:'road',severity:'medium',latitude:undefined,longitude:undefined,contact_email:'',contact_phone:'' }); setFiles([]); setSuccess(null) }} />
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-6">
@@ -145,6 +158,30 @@ export default function SubmitView() {
                   </div>
                 </button>
               ))}
+            </div>
+          </Field>
+          <Field label="Media (Optional)">
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-[#2a2d3e] border-dashed rounded-xl bg-[#1e2130] hover:border-[#3a3d4e] transition-colors">
+              <div className="space-y-1 text-center">
+                <svg className="mx-auto h-12 w-12 text-slate-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div className="flex text-sm text-slate-400 justify-center">
+                  <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-medium text-orange-400 hover:text-orange-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500">
+                    <span>Upload a file</span>
+                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept="image/*,audio/*" onChange={e => { if (e.target.files) setFiles(Array.from(e.target.files)) }} />
+                  </label>
+                  <p className="pl-1">or drag and drop</p>
+                </div>
+                <p className="text-xs text-slate-500">PNG, JPG, GIF, Audio up to 10MB</p>
+                {files.length > 0 && (
+                  <div className="mt-4 flex flex-col gap-1 items-center">
+                    {files.map(f => (
+                      <p key={f.name} className="text-xs text-orange-300">{f.name}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </Field>
           <NavButtons onNext={() => { if (!form.title || !form.description) { setError('Title and description are required.'); return }; setError(null); setStep(2) }} />

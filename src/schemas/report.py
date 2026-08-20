@@ -4,31 +4,7 @@ from enum import Enum
 from uuid import UUID
 
 
-class ReportCategory(str, Enum):
-    ROAD = "road"
-    DRAINAGE = "drainage"
-    WATER = "water"
-    ELECTRICITY = "electricity"
-    GARBAGE = "garbage"
-    ENVIRONMENT = "environment"
-    ANIMALS = "animals"
-    ACCIDENT = "accident"
-    CRIME = "crime"
-    OTHER = "other"
 
-
-class ReportSeverity(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class ReportStatus(str, Enum):
-    PENDING = "pending"
-    ASSIGNED = "assigned"
-    IN_REVIEW = "in_review"
-    RESOLVED = "resolved"
 
 
 # DB schema
@@ -52,17 +28,6 @@ class Report:
 
 
 # Public submission
-@dataclass
-class ReportSubmit:
-    title: str
-    description: str
-    category: ReportCategory
-    severity: ReportSeverity
-    latitude: float
-    longitude: float
-    media_urls: list[str] | None = None
-    contact_email: str | None = None
-    contact_phone: str | None = None
 
 
 # Public listing

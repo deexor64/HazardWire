@@ -1,36 +1,86 @@
-"""
-Public report endpoints — no auth required.
-
-Routes:
-    POST   /reports               Submit a new hazard report
-    GET    /reports               List reports with filters
-    GET    /reports/{report_id}   Get a report by ID
-"""
-
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
-from db import reports as report_db
-from schemas.report import ReportCategory, ReportSeverity, ReportStatus
+from db import reports
 
-router = APIRouter(prefix="/reports", tags=["Reports"])
+router = APIRouter(prefix="/reports")
 
 
-# ── POST /reports ─────────────────────────────────────────────────────────────
+class ReportCategory(str, Enum):
+    ROAD = "road"
+    DRAINAGE = "drainage"
+    WATER = "water"
+    ELECTRICITY = "electricity"
+    GARBAGE = "garbage"
+    ENVIRONMENT = "environment"
+    ANIMALS = "animals"
+    ACCIDENT = "accident"
+    CRIME = "crime"
+    OTHER = "other"
+
+
+class ReportSeverity(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ReportStatus(str, Enum):
+    PENDING = "pending"
+    ASSIGNED = "assigned"
+    IN_REVIEW = "in_review"
+    RESOLVED = "resolved"
+
+
+@dataclass
+class ReportSubmit:
+    title: str
+    description: str
+    category: ReportCategory
+    severity: ReportSeverity
+    latitude: float | None = None
+    longitude: float | None = None
+    media_urls: list[str] | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def submit_report(request: Request):
-    body = await request.json()
-    record = report_db.create_report(body)
+async def create_report(form: ReportSubmit):
+    title = form.title
+    description = form.description
+    category = form.category
+    severity = form.severity
+    latitude = form.latitude
+    longitude = form.longitude
+    media_urls = form.media_urls
+    contact_email = form.contact_email
+    contact_phone = form.contact_phone
+
+    result = reports.add_report_to_queue(
+        title,
+        description,
+        category.value if category else None,
+        severity.value if severity else None,
+        latitude,
+        longitude,
+        media_urls,
+        contact_email,
+        contact_phone,
+    )
     return {
         "status": True,
-        "message": "Report submitted successfully.",
-        "data": record,
+        "message": "Report submitted successfully to the queue.",
+        "data": {"title": title, "queued": True},
     }
 
 
 # ── GET /reports ──────────────────────────────────────────────────────────────
+
 
 @router.get("")
 async def get_reports(
@@ -46,7 +96,7 @@ async def get_reports(
     page: int = 1,
     page_size: int = Query(default=20, le=100),
 ):
-    result = report_db.get_all_reports(
+    result = reports.get_all_reports(
         category=category.value if category else None,
         severity=severity.value if severity else None,
         status=status_filter.value if status_filter else None,
@@ -68,9 +118,10 @@ async def get_reports(
 
 # ── GET /reports/{report_id} ──────────────────────────────────────────────────
 
+
 @router.get("/{report_id}")
 async def get_report(report_id: str):
-    record = report_db.get_report_by_id(report_id)
+    record = reports.get_report_by_id(report_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

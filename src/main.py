@@ -4,22 +4,19 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api.organization import router as org_router
+from api.org import router as org_router
 from api.report import router as report_router
-import core.config as config
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"🚀  {config.APP_NAME} v{config.APP_VERSION} starting.")
+    print(f"🚀  HazardWire v0.1.0 starting.")
     yield
-    print(f"🛑  {config.APP_NAME} shutting down.")
+    print(f"🛑  HazardWire shutting down.")
 
 
 app = FastAPI(
-    title=config.APP_NAME,
-    version=config.APP_VERSION,
-    description=config.APP_DESCRIPTION,
+    title="HazardWire",
+    version="0.1.0",
+    description="AI-powered civic hazard reporting & intelligent routing platform for Sri Lanka.",
     lifespan=lifespan,
 )
 
@@ -45,7 +42,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 @app.get("/", tags=["Health"])
 async def root():
-    return {"app": config.APP_NAME, "version": config.APP_VERSION, "status": "ok", "docs": "/docs"}
+    return {"app": "HazardWire", "version": "0.1.0", "status": "ok", "docs": "/docs"}
 
 
 @app.get("/health", tags=["Health"])

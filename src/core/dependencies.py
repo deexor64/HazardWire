@@ -6,9 +6,12 @@ and returns the authenticated user. No local JWT secret needed.
 """
 
 from fastapi import HTTPException, Request, status
+from supabase_auth import User
+
+from .client import supabase
 
 
-def get_current_user(request: Request) -> dict:
+def get_current_user(request: Request) -> User:
     """
     Reads the Bearer token from the Authorization header, validates it
     with Supabase Auth, and returns the user dict.
@@ -22,9 +25,9 @@ def get_current_user(request: Request) -> dict:
             ...
         }
     """
-    from db.client import supabase
 
-    auth_header = request.headers.get("Authorization", "")
+    auth_header: str = request.headers.get("Authorization", "")
+
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -36,14 +39,17 @@ def get_current_user(request: Request) -> dict:
 
     try:
         response = supabase.auth.get_user(token)
+
         if not response or not response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return {"user": response.user, "token": token}
-    except Exception:
+
+        return response.user
+
+    except Exception as _:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token.",
