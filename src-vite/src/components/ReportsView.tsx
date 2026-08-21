@@ -14,12 +14,12 @@ export default function ReportsView() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Report | null>(null)
   const [filters, setFilters] = useState<ReportFilters>({ page: 1, page_size: 20 })
-  const [search, setSearch] = useState('')
+
 
   const load = useCallback(() => {
     setLoading(true)
     getReports(filters)
-      .then(res => { setReports(res.data.results); setTotal(res.data.total) })
+      .then((res: any) => { setReports(res.result.results); setTotal(res.result.total) })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [filters])
@@ -28,6 +28,25 @@ export default function ReportsView() {
 
   function setF(key: keyof ReportFilters, v: string | undefined) {
     setFilters(f => ({ ...f, [key]: v || undefined, page: 1 }))
+  }
+
+  function handleProximityChange(radius: string) {
+    if (!radius) {
+      setFilters(f => ({ ...f, lattitude: undefined, longitude: undefined, radius_km: undefined, page: 1 }))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setFilters(f => ({
+          ...f,
+          lattitude: parseFloat(pos.coords.latitude.toFixed(6)),
+          longitude: parseFloat(pos.coords.longitude.toFixed(6)),
+          radius_km: parseFloat(radius),
+          page: 1
+        }))
+      },
+      err => alert('Could not get your location: ' + err.message)
+    )
   }
 
   const totalPages = Math.ceil(total / (filters.page_size ?? 20))
@@ -67,6 +86,9 @@ export default function ReportsView() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
+          <input value={filters.title ?? ''} onChange={e => setF('title', e.target.value)}
+            placeholder="Search title…"
+            className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500 w-32" />
           <select value={filters.category ?? ''} onChange={e => setF('category', e.target.value as any)}
             className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-orange-500 cursor-pointer">
             <option value="">Category</option>
@@ -82,9 +104,17 @@ export default function ReportsView() {
             <option value="">Status</option>
             {STATUSES.map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
           </select>
+          <select value={filters.radius_km ?? ''} onChange={e => handleProximityChange(e.target.value)}
+            className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-orange-500 cursor-pointer">
+            <option value="">Everywhere (Location)</option>
+            <option value="1">Within 1 km</option>
+            <option value="5">Within 5 km</option>
+            <option value="10">Within 10 km</option>
+            <option value="50">Within 50 km</option>
+          </select>
           <input value={filters.authority ?? ''} onChange={e => setF('authority', e.target.value)}
             placeholder="Authority…"
-            className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500 w-32" />
+            className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500 w-28" />
           {Object.values(filters).some(Boolean) && (
             <button onClick={() => setFilters({ page: 1, page_size: 20 })}
               className="text-xs text-orange-400 hover:text-orange-300 px-2 transition-colors">

@@ -55,3 +55,7 @@ def get_current_user(request: Request) -> User:
             detail="Invalid or expired token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def is_authenticated(user: User) -> bool:
+    return user is not None

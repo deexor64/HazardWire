@@ -40,9 +40,9 @@ export default function MapView() {
   useEffect(() => {
     setLoading(true)
     getReports(filters)
-      .then(res => {
-        setReports(res.data.results)
-        setTotal(res.data.total)
+      .then((res: any) => {
+        setReports(res.result.results)
+        setTotal(res.result.total)
       })
       .catch(console.error)
       .finally(() => setLoading(false))

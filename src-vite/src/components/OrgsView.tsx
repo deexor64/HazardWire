@@ -25,13 +25,13 @@ function AuthForms({ onAuth }: { onAuth: (s: AuthState) => void }) {
     try {
       if (mode === 'signup') {
         const res: any = await orgSignup(email, password)
-        setInfo(res.message ?? 'Check your email to confirm your account.')
-        if (res.data?.access_token) {
-          onAuth({ token: res.data.access_token, userId: res.data.user_id, email: res.data.email, profile: null })
+        setInfo(res.result?.message ?? 'Check your email to confirm your account.')
+        if (res.result?.access_token) {
+          onAuth({ token: res.result.access_token, userId: res.result.id, email: res.result.email, profile: null })
         }
       } else {
         const res: any = await orgLogin(email, password)
-        onAuth({ token: res.data.access_token, userId: res.data.user_id, email: res.data.email, profile: null })
+        onAuth({ token: res.result.access_token, userId: res.result.id, email: res.result.email, profile: null })
       }
     } catch (e: any) {
       setError(e.message)
@@ -87,7 +87,7 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
     setLoading(true)
     try {
       const res: any = await getMe(auth.token!)
-      setProfile(res.data?.profile ?? null)
+      setProfile(res.result ?? null)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -96,7 +96,7 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
     setSaving(true); setError(null); setSuccess(null)
     try {
       const res: any = await updateMe(auth.token!, editForm)
-      setProfile(res.data)
+      setProfile(res.result)
       setEditing(false)
       setSuccess('Profile updated successfully.')
     } catch (e: any) { setError(e.message) }

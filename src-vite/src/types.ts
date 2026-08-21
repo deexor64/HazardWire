@@ -30,14 +30,15 @@ export interface ReportListResult {
 }
 
 export interface ReportFilters {
+  title?: string
   category?: ReportCategory
   severity?: ReportSeverity
   status?: ReportStatus
   authority?: string
   date_from?: string
   date_to?: string
-  lat?: number
-  lng?: number
+  lattitude?: number
+  longitude?: number
   radius_km?: number
   page?: number
   page_size?: number

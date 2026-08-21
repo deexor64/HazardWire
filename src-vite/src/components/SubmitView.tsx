@@ -37,7 +37,7 @@ export default function SubmitView() {
   const [files, setFiles] = useState<File[]>([])
 
   const mapRef = useRef<L.Map | null>(null)
-  const markerRef = useRef<L.Marker | null>(null)
+  const markerRef = useRef<L.CircleMarker | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
 
   // Map for location picker
@@ -91,7 +91,7 @@ export default function SubmitView() {
       if (media_urls.length > 0) body.media_urls = media_urls
 
       const res: any = await submitReport(body)
-      setSuccess(res.data?.id ?? 'submitted')
+      setSuccess(typeof res.result === 'string' ? res.result : 'submitted')
       setStep(4)
     } catch (e: any) {
       setError(e.message)

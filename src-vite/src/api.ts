@@ -1,31 +1,30 @@
 import type { Report, ReportFilters, ReportListResult, ReportSubmitBody } from './types'
 
-const BASE = '/api/v1'
+const BASE = '/api'
 
 async function request<T>(path: string, options?: RequestInit, token?: string | null): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(BASE + path, { ...options, headers: { ...headers, ...options?.headers } })
   const json = await res.json()
-  if (!json.status && json.detail) throw new Error(json.detail)
-  if (!res.ok && !json.status) throw new Error(json.message ?? `HTTP ${res.status}`)
+  if (!json.status) throw new Error(typeof json.result === 'string' ? json.result : `HTTP ${res.status}`)
   return json
 }
 
 // ── Reports ──────────────────────────────────────────────────────────────────
 
-export async function getReports(filters: ReportFilters = {}): Promise<{ data: ReportListResult }> {
+export async function getReports(filters: ReportFilters = {}): Promise<{ result: ReportListResult }> {
   const params = new URLSearchParams()
   Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') params.set(k, String(v)) })
   const qs = params.toString()
   return request(`/reports${qs ? '?' + qs : ''}`)
 }
 
-export async function getReport(id: string): Promise<{ data: Report }> {
+export async function getReport(id: string): Promise<{ result: Report }> {
   return request(`/reports/${id}`)
 }
 
-export async function submitReport(body: ReportSubmitBody): Promise<{ data: Report; message: string }> {
+export async function submitReport(body: ReportSubmitBody): Promise<{ result: { title: string, queued: boolean } }> {
   return request('/reports', { method: 'POST', body: JSON.stringify(body) })
 }
 
@@ -36,7 +35,7 @@ export async function orgSignup(email: string, password: string) {
 }
 
 export async function orgLogin(email: string, password: string) {
-  return request('/orgs/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+  return request('/orgs/signin', { method: 'POST', body: JSON.stringify({ email, password }) })
 }
 
 export async function orgLogout(token: string) {
@@ -44,13 +43,13 @@ export async function orgLogout(token: string) {
 }
 
 export async function getMe(token: string) {
-  return request('/orgs/me', undefined, token)
+  return request('/orgs/profile', undefined, token)
 }
 
 export async function updateMe(token: string, updates: Record<string, string>) {
-  return request('/orgs/me', { method: 'PUT', body: JSON.stringify(updates) }, token)
+  return request('/orgs/profile', { method: 'PUT', body: JSON.stringify(updates) }, token)
 }
 
 export async function deleteMe(token: string) {
-  return request('/orgs/me', { method: 'DELETE' }, token)
+  return request('/orgs/profile', { method: 'DELETE' }, token)
 }
