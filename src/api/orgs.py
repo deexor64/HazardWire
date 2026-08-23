@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from supabase_auth import Session, User
+from supabase_auth import User
 
 from api.types import OrgProfileUpdate, OrgSignin, OrgSignup
 from core.dependencies import get_current_user
@@ -10,133 +10,80 @@ router = APIRouter(prefix="/orgs")
 
 
 @router.post("/signup")
-async def signup(form: OrgSignup) -> JSONResponse:
-    # Signup
-    result = orgs.signup(form.email, form.password)
+async def signup(form: OrgSignup):
+    auth_res = orgs.signup(form.email, form.password)
+    if not auth_res.status:
+        return JSONResponse({"status": False, "result": auth_res.result})
 
-    if not result.status:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"status": False, "result": result.result},
-        )
+    user = auth_res.result.user
+    session = auth_res.result.session
 
-    user: User = auth_res.result.get("user")
-    session: Session = auth_res.result.get("session")
-
-    # Create profile
-    profile_res = orgs.create_profile(form.name, form.email)
-
+    profile_res = orgs.create_profile(str(user.id), form.name, form.email)
     if not profile_res.status:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"status": False, "result": profile_res.result},
-        )
+        return JSONResponse({"status": False, "result": profile_res.result})
 
     return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
+        {
             "status": True,
             "result": {
-                "message": "Registration successful. Please check your email to confirm your account before logging in.",
-                "id": user.id,
+                "id": str(user.id),
                 "email": user.email,
                 "access_token": session.access_token if session else None,
-                "token_type": "bearer",
             },
-        },
+        }
     )
 
 
 @router.post("/signin")
-async def signin(form: OrgSignin) -> JSONResponse:
-    auth_res = orgs.signin(form.email, form.password)
+async def signin(form: OrgSignin):
+    res = orgs.signin(form.email, form.password)
+    if not res.status:
+        return JSONResponse({"status": False, "result": res.result})
 
-    if not auth_res.status:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"status": False, "result": "Invalid email or password."},
-        )
-
-    user = auth_res.result.get("user")
-    session = auth_res.result.get("session")
-
-    if not user or not session:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"status": False, "result": "Invalid email or password."},
-        )
+    user = res.result.user
+    session = res.result.session
 
     return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
+        {
             "status": True,
             "result": {
                 "id": str(user.id),
                 "email": user.email,
                 "access_token": session.access_token,
-                "token_type": "bearer",
             },
-        },
+        }
     )
 
 
 @router.post("/logout")
-async def logout(user: User = Depends(get_current_user)) -> JSONResponse:
+async def logout(user: User = Depends(get_current_user)):
     res = orgs.signout()
-    return JSONResponse(
-        status_code=status.HTTP_200_OK
-        if res.status
-        else status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "status": res.status,
-            "result": res.result,
-        },
-    )
+    return JSONResponse({"status": res.status, "result": res.result})
 
 
 @router.get("/profile")
-async def get_profile(user: User = Depends(get_current_user)) -> JSONResponse:
-    res = orgs.get_profile_full(str(user.id))
-    return JSONResponse(
-        status_code=status.HTTP_200_OK if res.status else status.HTTP_404_NOT_FOUND,
-        content={
-            "status": res.status,
-            "result": res.result,
-        },
-    )
+async def get_profile(user: User = Depends(get_current_user)):
+    res = orgs.get_profile(str(user.id))
+    return JSONResponse({"status": res.status, "result": res.result})
 
 
 @router.put("/profile")
 async def update_profile(
     form: OrgProfileUpdate, user: User = Depends(get_current_user)
-) -> JSONResponse:
-    res = orgs.update_profile(
-        user.id,
-        form.name,
-        form.authority_type,
-        form.description,
-        form.phone,
-        form.address,
-        form.website,
-    )
-    return JSONResponse(
-        status_code=status.HTTP_200_OK if res.status else status.HTTP_400_BAD_REQUEST,
-        content={
-            "status": res.status,
-            "result": res.result,
-        },
-    )
+):
+    data = {
+        "name": form.name,
+        "authority_type": form.authority_type,
+        "description": form.description,
+        "phone": form.phone,
+        "address": form.address,
+        "website": form.website,
+    }
+    res = orgs.update_profile(str(user.id), data)
+    return JSONResponse({"status": res.status, "result": res.result})
 
 
 @router.delete("/profile")
-async def delete_me(user: User = Depends(get_current_user)) -> JSONResponse:
-    res = orgs.delete_profile(user.id)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK
-        if res.status
-        else status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "status": res.status,
-            "result": res.result,
-        },
-    )
+async def delete_profile(user: User = Depends(get_current_user)):
+    res = orgs.delete_profile(str(user.id))
+    return JSONResponse({"status": res.status, "result": res.result})

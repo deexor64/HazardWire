@@ -24,9 +24,17 @@ export async function getReport(id: string): Promise<{ result: Report }> {
   return request(`/reports/${id}`)
 }
 
-export async function submitReport(body: ReportSubmitBody): Promise<{ result: { title: string, queued: boolean } }> {
-  return request('/reports', { method: 'POST', body: JSON.stringify(body) })
+export async function submitReport(body: any) {
+  return request('/reports', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
+
+export async function getReportByToken(token: string) {
+  return request(`/reports/by-token/${token}`)
+}
+
 
 // ── Orgs ─────────────────────────────────────────────────────────────────────
 

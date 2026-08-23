@@ -75,4 +75,4 @@ export interface AuthState {
   profile: OrgProfile | null
 }
 
-export type View = 'map' | 'reports' | 'submit' | 'orgs'
+export type View = 'map' | 'reports' | 'submit' | 'my-reports' | 'orgs'

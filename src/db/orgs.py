@@ -1,122 +1,85 @@
-from postgrest import APIResponse
-from postgrest.base_request_builder import SingleAPIResponse
-from supabase_auth import AuthResponse
-
 from core.client import supabase
 
 from .types import DbResult
 
 
-def signup(email: str, password: str) -> AuthResponse | Exception:
-    return supabase.auth.sign_up({"email": email, "password": password})
+def signup(email: str, password: str) -> DbResult:
+    try:
+        res = supabase.auth.sign_up({"email": email, "password": password})
+        if res.user is None:
+            return DbResult(False, "Signup failed")
+        return DbResult(True, res)
+    except Exception as e:
+        return DbResult(False, str(e))
 
 
-def create_profile(name: str, email: str) -> APIResponse | Exception:
-    return (
-        supabase.table("organizations")
-        .insert(
-            {
-                "name": name,
-                "email": email,
-            }
+def create_profile(user_id: str, name: str, email: str) -> DbResult:
+    try:
+        res = (
+            supabase.table("organizations")
+            .insert(
+                {
+                    "id": user_id,
+                    "name": name,
+                    "email": email,
+                }
+            )
+            .execute()
         )
-        .execute()
-    )
+        return DbResult(True, res.data)
+    except Exception as e:
+        return DbResult(False, str(e))
 
 
-def signin(email: str, password: str) -> AuthResponse | Exception:
-    return supabase.auth.sign_in_with_password({"email": email, "password": password})
-
-
-def signout() -> None | Exception:
-    return supabase.auth.sign_out()
-
-
-def get_profile_full(org_id: str) -> SingleAPIResponse | None | Exception:
-    return (
-        supabase.table("organizations")
-        .select(
-            "id",
-            "email",
-            "name",
-            "authority_type",
-            "description",
-            "phone",
-            "address",
-            "website",
-            "verified",
-            "created_at",
-            "updated_at",
+def signin(email: str, password: str) -> DbResult:
+    try:
+        res = supabase.auth.sign_in_with_password(
+            {"email": email, "password": password}
         )
-        .eq("id", org_id)
-        .maybe_single()
-        .execute()
-    )
+        if res.user is None or res.session is None:
+            return DbResult(False, "Invalid email or password")
+        return DbResult(True, res)
+    except Exception as e:
+        return DbResult(False, str(e))
 
 
-def get_profile_full_public(org_id: str) -> SingleAPIResponse | None | Exception:
-    return (
-        supabase.table("organizations")
-        .select(
-            "id",
-            "email",
-            "name",
-            "authority_type",
-            "description",
-            "phone",
-            "address",
-            "website",
-            "verified",
+def signout() -> DbResult:
+    try:
+        supabase.auth.sign_out()
+        return DbResult(True, "Logged out")
+    except Exception as e:
+        return DbResult(False, str(e))
+
+
+def get_profile(org_id: str) -> DbResult:
+    try:
+        res = (
+            supabase.table("organizations")
+            .select("*")
+            .eq("id", org_id)
+            .maybe_single()
+            .execute()
         )
-        .eq("id", org_id)
-        .maybe_single()
-        .execute()
-    )
+        if res.data is None:
+            return DbResult(False, "Profile not found")
+        return DbResult(True, res.data)
+    except Exception as e:
+        return DbResult(False, str(e))
 
 
-def get_profile_partial(org_id: str) -> SingleAPIResponse | None | Exception:
-    return (
-        supabase.table("organizations")
-        .select(
-            "id",
-            "name",
-            "authority_type",
-            "phone",
-            "verified",
-        )
-        .eq("id", org_id)
-        .maybe_single()
-        .execute()
-    )
+def update_profile(org_id: str, data: dict) -> DbResult:
+    try:
+        # remove None values
+        clean = {k: v for k, v in data.items() if v is not None}
+        res = supabase.table("organizations").update(clean).eq("id", org_id).execute()
+        return DbResult(True, res.data)
+    except Exception as e:
+        return DbResult(False, str(e))
 
 
-def update_profile(
-    org_id: str,
-    name: str | None = None,
-    email: str | None = None,
-    authority_type: str | None = None,
-    description: str | None = None,
-    phone: str | None = None,
-    address: str | None = None,
-    website: str | None = None,
-) -> APIResponse | Exception:
-    return (
-        supabase.table("organizations")
-        .update(
-            {
-                "name": name,
-                "email": email,
-                "authority_type": authority_type,
-                "description": description,
-                "phone": phone,
-                "address": address,
-                "website": website,
-            }
-        )
-        .eq("id", org_id)
-        .execute()
-    )
-
-
-def delete_profile(org_id: str) -> APIResponse | Exception:
-    return supabase.table("organizations").delete().eq("id", org_id).execute()
+def delete_profile(org_id: str) -> DbResult:
+    try:
+        res = supabase.table("organizations").delete().eq("id", org_id).execute()
+        return DbResult(True, res.data)
+    except Exception as e:
+        return DbResult(False, str(e))

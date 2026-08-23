@@ -78,7 +78,7 @@ class OrgSignin(BaseModel):
 
 class OrgProfileUpdate(BaseModel):
     name: str
-    authority_type: ReportCategory | None = None
+    authority_type: str | None = None
     description: str | None = None
     phone: str | None = None
     address: str | None = None

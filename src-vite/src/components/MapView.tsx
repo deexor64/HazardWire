@@ -73,7 +73,7 @@ export default function MapView() {
       marker.bindTooltip(
         `<div style="font-family:Inter,sans-serif;min-width:160px">
           <div style="font-weight:600;font-size:13px;color:#f1f5f9;margin-bottom:4px">${CATEGORY_ICON[report.category]} ${report.title}</div>
-          <div style="font-size:11px;color:#94a3b8">${report.severity.toUpperCase()} • ${report.status.replace('_',' ').toUpperCase()}</div>
+          <div style="font-size:11px;color:#94a3b8">${(report.severity || 'unknown').toUpperCase()} • ${report.status.replace('_',' ').toUpperCase()}</div>
         </div>`,
         { direction: 'top', className: '', offset: [0, -8] }
       )
