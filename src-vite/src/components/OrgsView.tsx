@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { AuthState } from '../types'
-import { orgSignup, orgLogin, orgLogout, getMe } from '../api'
+import { orgSignup, orgLogin, orgLogout, getMe, updateMe } from '../api'
 
 interface Props {
   auth: AuthState
@@ -11,20 +11,26 @@ const BASE = '/api'
 
 async function orgGetReports(token: string) {
   const res = await fetch(`${BASE}/orgs/reports`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   })
   const json = await res.json()
-  if (!json.status) throw new Error(json.result || 'Failed')
+  if (!json.status) throw new Error(json.result || 'Failed to load reports')
   return json
 }
 
-async function orgUpdateReport(token: string, reportId: string, status: string, comment: string) {
-  const res = await fetch(`${BASE}/orgs/reports/${reportId}?status=${status}&comment=${encodeURIComponent(comment)}`, {
+async function orgUpdateReport(
+  token: string,
+  reportId: string,
+  status: string,
+  comment: string
+) {
+  const params = new URLSearchParams({ status, comment })
+  const res = await fetch(`${BASE}/orgs/reports/${reportId}?${params}`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   })
   const json = await res.json()
-  if (!json.status) throw new Error(json.result || 'Failed')
+  if (!json.status) throw new Error(json.result || 'Update failed')
   return json
 }
 
@@ -52,7 +58,7 @@ function AuthForms({ onAuth }: { onAuth: (s: AuthState) => void }) {
             token: res.result.access_token,
             userId: res.result.id,
             email: res.result.email,
-            profile: null
+            profile: null,
           })
         }
       } else {
@@ -61,7 +67,7 @@ function AuthForms({ onAuth }: { onAuth: (s: AuthState) => void }) {
           token: res.result.access_token,
           userId: res.result.id,
           email: res.result.email,
-          profile: null
+          profile: null,
         })
       }
     } catch (e: any) {
@@ -72,57 +78,79 @@ function AuthForms({ onAuth }: { onAuth: (s: AuthState) => void }) {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12">
-      <h1 className="text-2xl font-bold mb-2 text-center">
-        {mode === 'login' ? 'Organisation Login' : 'Register Organisation'}
-      </h1>
-      <p className="text-gray-500 text-center mb-8 text-sm">
-        {mode === 'login' ? 'Access your dashboard' : 'Create a new organisation account'}
-      </p>
+    <div className="max-w-md mx-auto">
+      <div className="mb-8 text-center">
+        <h1 className="text-xl font-semibold text-slate-800">
+          {mode === 'login' ? 'Organisation Login' : 'Register Organisation'}
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">
+          {mode === 'login'
+            ? 'Sign in to manage hazard reports'
+            : 'Create an account for your organisation'}
+        </p>
+      </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
         {mode === 'signup' && (
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Organisation Name"
-            className="input-base"
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Organisation Name
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input-base"
+              placeholder="e.g. Road Development Authority"
+            />
+          </div>
         )}
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
-          className="input-base"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="Password"
-          className="input-base"
-        />
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input-base"
+            placeholder="name@organisation.lk"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input-base"
+            placeholder="••••••••"
+          />
+        </div>
+
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 disabled:opacity-50"
+          className="w-full py-2.5 bg-slate-800 text-white text-sm font-medium rounded-lg
+                     hover:bg-slate-700 disabled:opacity-50"
         >
           {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
         </button>
       </div>
 
-      <p className="text-center text-sm text-gray-500 mt-6">
+      <p className="text-center text-sm text-slate-500 mt-5">
         {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
         <button
-          onClick={() => setMode(m => m === 'login' ? 'signup' : 'login')}
-          className="text-orange-500 font-medium"
+          onClick={() => {
+            setMode((m) => (m === 'login' ? 'signup' : 'login'))
+            setError('')
+          }}
+          className="text-orange-600 font-medium hover:underline"
         >
           {mode === 'login' ? 'Register' : 'Sign in'}
         </button>
@@ -132,7 +160,9 @@ function AuthForms({ onAuth }: { onAuth: (s: AuthState) => void }) {
 }
 
 function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState) => void }) {
+  const [tab, setTab] = useState<'reports' | 'profile'>('reports')
   const [reports, setReports] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<any>(null)
@@ -140,24 +170,35 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
   const [comment, setComment] = useState('')
   const [updating, setUpdating] = useState(false)
 
+  // Profile editing
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState<Record<string, string>>({})
+  const [savingProfile, setSavingProfile] = useState(false)
+
   async function loadReports() {
-    setLoading(true)
-    setError('')
     try {
       const res: any = await orgGetReports(auth.token!)
       setReports(res.result?.results || [])
     } catch (e: any) {
       setError(e.message)
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  async function loadProfile() {
+    try {
+      const res: any = await getMe(auth.token!)
+      setProfile(res.result)
+    } catch (e: any) {
+      console.error(e)
     }
   }
 
   useEffect(() => {
-    loadReports()
+    setLoading(true)
+    Promise.all([loadReports(), loadProfile()]).finally(() => setLoading(false))
   }, [])
 
-  async function handleUpdate() {
+  async function handleUpdateReport() {
     if (!selected) return
     setUpdating(true)
     try {
@@ -172,85 +213,222 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
     }
   }
 
+  async function handleSaveProfile() {
+    setSavingProfile(true)
+    try {
+      const res: any = await updateMe(auth.token!, editForm)
+      setProfile(res.result)
+      setEditing(false)
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
   async function handleLogout() {
     await orgLogout(auth.token!).catch(() => {})
     onAuth({ token: null, userId: null, email: null, profile: null })
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-3xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold">Organisation Dashboard</h1>
-          <p className="text-sm text-gray-500">{auth.email}</p>
+          <h1 className="text-xl font-semibold text-slate-800">Organisation Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{auth.email}</p>
         </div>
         <button
           onClick={handleLogout}
-          className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="text-sm px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
         >
           Sign Out
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-slate-200">
+        <button
+          onClick={() => setTab('reports')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === 'reports'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Reports
+        </button>
+        <button
+          onClick={() => setTab('profile')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === 'profile'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Profile
+        </button>
+      </div>
+
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold">Assigned / Pending Reports ({reports.length})</h2>
-        <button
-          onClick={loadReports}
-          className="text-sm text-orange-500 hover:underline"
-        >
-          Refresh
-        </button>
-      </div>
+      {/* REPORTS TAB */}
+      {tab === 'reports' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium text-slate-700">
+              Reports needing attention ({reports.length})
+            </h2>
+            <button onClick={loadReports} className="text-sm text-orange-600 hover:underline">
+              Refresh
+            </button>
+          </div>
 
-      {loading ? (
-        <p className="text-gray-500">Loading...</p>
-      ) : reports.length === 0 ? (
-        <p className="text-gray-500">No reports available.</p>
-      ) : (
-        <div className="space-y-3">
-          {reports.map(r => (
-            <div
-              key={r.id}
-              className="border border-gray-200 rounded-lg p-4 bg-white hover:border-orange-300 cursor-pointer"
-              onClick={() => {
-                setSelected(r)
-                setNewStatus(r.status === 'pending' ? 'in_progress' : r.status)
-              }}
-            >
-              <div className="flex justify-between items-start">
-                <h3 className="font-medium">{r.title}</h3>
-                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded capitalize">
-                  {r.status}
-                </span>
+          {loading ? (
+            <div className="text-center py-16 text-slate-500 text-sm">Loading…</div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-16 text-slate-500 text-sm">
+              No pending or assigned reports.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reports.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    setSelected(r)
+                    setNewStatus(
+                      ['pending', 'assigned'].includes(r.status) ? 'in_progress' : r.status
+                    )
+                  }}
+                  className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-medium text-slate-800">{r.title}</h3>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{r.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* PROFILE TAB */}
+      {tab === 'profile' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-medium text-slate-800">Organisation Profile</h2>
+            {!editing ? (
+              <button
+                onClick={() => {
+                  setEditForm({
+                    name: profile?.name || '',
+                    authority_type: profile?.authority_type || '',
+                    description: profile?.description || '',
+                    phone: profile?.phone || '',
+                    address: profile?.address || '',
+                    website: profile?.website || '',
+                  })
+                  setEditing(true)
+                }}
+                className="text-sm text-orange-600 hover:underline"
+              >
+                Edit
+              </button>
+            ) : (
+              <button
+                onClick={() => setEditing(false)}
+                className="text-sm text-slate-500 hover:underline"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          {!editing ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <InfoItem label="Name" value={profile?.name} />
+              <InfoItem label="Authority Type" value={profile?.authority_type} />
+              <InfoItem label="Phone" value={profile?.phone} />
+              <InfoItem label="Website" value={profile?.website} />
+              <div className="sm:col-span-2">
+                <InfoItem label="Address" value={profile?.address} />
               </div>
-              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{r.description}</p>
-              <div className="text-xs text-gray-400 mt-2 capitalize">
-                {r.category || '—'} · {r.severity || '—'}
+              <div className="sm:col-span-2">
+                <InfoItem label="Description" value={profile?.description} />
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-4">
+              {[
+                { key: 'name', label: 'Organisation Name' },
+                { key: 'authority_type', label: 'Authority Type (e.g. road, water, electricity)' },
+                { key: 'phone', label: 'Phone' },
+                { key: 'website', label: 'Website' },
+                { key: 'address', label: 'Address' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    {field.label}
+                  </label>
+                  <input
+                    value={editForm[field.key] || ''}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, [field.key]: e.target.value }))
+                    }
+                    className="input-base"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description || ''}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  rows={3}
+                  className="input-base resize-none"
+                />
+              </div>
+
+              <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="w-full py-2.5 bg-orange-500 text-white text-sm font-medium rounded-lg
+                           hover:bg-orange-600 disabled:opacity-50"
+              >
+                {savingProfile ? 'Saving…' : 'Save Profile'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Update Modal */}
+      {/* Update Report Modal */}
       {selected && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl">
-            <h2 className="text-lg font-bold mb-1">{selected.title}</h2>
-            <p className="text-sm text-gray-600 mb-4">{selected.description}</p>
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 border border-slate-200 shadow-lg">
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">{selected.title}</h2>
+            <p className="text-sm text-slate-500 mb-5 line-clamp-3">{selected.description}</p>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Update Status</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Update Status
+                </label>
                 <select
                   value={newStatus}
-                  onChange={e => setNewStatus(e.target.value)}
+                  onChange={(e) => setNewStatus(e.target.value)}
                   className="input-base"
                 >
                   <option value="in_progress">In Progress</option>
@@ -260,35 +438,67 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Comment (optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Comment (optional)
+                </label>
                 <textarea
                   value={comment}
-                  onChange={e => setComment(e.target.value)}
+                  onChange={(e) => setComment(e.target.value)}
                   rows={3}
-                  className="input-base"
-                  placeholder="Add a note about the action taken..."
+                  className="input-base resize-none"
+                  placeholder="What action was taken?"
                 />
               </div>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setSelected(null)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                onClick={() => {
+                  setSelected(null)
+                  setComment('')
+                }}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
-                onClick={handleUpdate}
+                onClick={handleUpdateReport}
                 disabled={updating}
-                className="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 disabled:opacity-50"
               >
-                {updating ? 'Saving...' : 'Update Report'}
+                {updating ? 'Saving…' : 'Update Report'}
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    analyzing: 'bg-sky-50 text-sky-700 border-sky-200',
+    assigned: 'bg-blue-50 text-blue-700 border-blue-200',
+    in_progress: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    closed: 'bg-slate-100 text-slate-600 border-slate-200',
+  }
+  const style = styles[status] || styles.pending
+
+  return (
+    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize shrink-0 ${style}`}>
+      {status?.replace('_', ' ') || 'Unknown'}
+    </span>
+  )
+}
+
+function InfoItem({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-500 mb-0.5">{label}</p>
+      <p className="font-medium text-slate-800">{value || '—'}</p>
     </div>
   )
 }

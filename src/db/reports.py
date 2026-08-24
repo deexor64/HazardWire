@@ -145,3 +145,17 @@ def get_report_by_token(token: str) -> DbResult:
         return DbResult(True, res.data)
     except Exception as e:
         return DbResult(False, str(e))
+
+
+def get_report_updates(report_id: str) -> DbResult:
+    try:
+        res = (
+            supabase.table("report_updates")
+            .select("*")
+            .eq("report_id", report_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return DbResult(True, res.data or [])
+    except Exception as e:
+        return DbResult(False, str(e))

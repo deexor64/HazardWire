@@ -78,3 +78,9 @@ async def get_report(report_id: str):
 async def get_report_by_token(token: str):
     result = reports.get_report_by_token(token)
     return JSONResponse({"status": result.status, "result": result.result})
+
+
+@router.get("/{report_id}/updates")
+async def get_report_updates(report_id: str):
+    result = reports.get_report_updates(report_id)
+    return JSONResponse({"status": result.status, "result": result.result})

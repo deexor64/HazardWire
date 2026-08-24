@@ -1,181 +1,176 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { Report, ReportFilters, ReportSeverity } from '../types'
 import { getReports } from '../api'
-import { SEVERITY_COLOR, CATEGORY_ICON, SEVERITY_BG, STATUS_BG, relativeTime, createMarkerIcon } from '../utils'
-import ReportCard from './ReportCard'
 
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#dc2626',
+  high: '#ea580c',
+  medium: '#ca8a04',
+  low: '#16a34a',
+  unknown: '#64748b',
+}
 
-const CATEGORY_OPTIONS = ['road','drainage','water','electricity','garbage','environment','animals','accident','crime','other'] as const
-const SEVERITY_OPTIONS = ['critical','high','medium','low'] as const
+function createMarkerSvg(severity: string | null) {
+  const color = SEVERITY_COLORS[severity || 'unknown'] || SEVERITY_COLORS.unknown
+  return `
+    <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z" fill="${color}"/>
+      <circle cx="14" cy="14" r="6" fill="white"/>
+    </svg>
+  `
+}
 
 export default function MapView() {
   const mapRef = useRef<L.Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const markersRef = useRef<L.Marker[]>([])
-  const [reports, setReports] = useState<Report[]>([])
-  const [total, setTotal] = useState(0)
+  const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Report | null>(null)
-  const [filters, setFilters] = useState<ReportFilters>({ page: 1, page_size: 100 })
-  const [filterOpen, setFilterOpen] = useState(false)
+  const [selected, setSelected] = useState<any>(null)
 
-  // Initialise map once
+  // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+
     const map = L.map(containerRef.current, {
-      center: [7.8731, 80.7718], // Sri Lanka centroid
+      center: [7.8731, 80.7718],
       zoom: 8,
       zoomControl: true,
     })
-    L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19, subdomains: 'abcd' }).addTo(map)
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19,
+    }).addTo(map)
+
     mapRef.current = map
-    return () => { map.remove(); mapRef.current = null }
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+    }
   }, [])
 
-  // Fetch reports whenever filters change
+  // Fetch reports
   useEffect(() => {
     setLoading(true)
-    getReports(filters)
+    getReports({ page_size: 100 })
       .then((res: any) => {
-        setReports(res.result.results)
-        setTotal(res.result.total)
+        setReports(res.result?.results || [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [filters])
+  }, [])
 
-  // Sync markers
+  // Draw markers
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    markersRef.current.forEach(m => m.remove())
+
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    reports.forEach(report => {
+    reports.forEach((report) => {
       if (!report.latitude || !report.longitude) return
-      const svgStr = createMarkerIcon(report.severity)
+
       const icon = L.divIcon({
-        html: svgStr,
+        html: createMarkerSvg(report.severity),
         className: '',
-        iconSize: [32, 42],
-        iconAnchor: [16, 42],
-        popupAnchor: [0, -44],
+        iconSize: [28, 36],
+        iconAnchor: [14, 36],
+        popupAnchor: [0, -36],
       })
+
       const marker = L.marker([report.latitude, report.longitude], { icon })
         .addTo(map)
         .on('click', () => setSelected(report))
 
-      // Tooltip
-      marker.bindTooltip(
-        `<div style="font-family:Inter,sans-serif;min-width:160px">
-          <div style="font-weight:600;font-size:13px;color:#f1f5f9;margin-bottom:4px">${CATEGORY_ICON[report.category]} ${report.title}</div>
-          <div style="font-size:11px;color:#94a3b8">${(report.severity || 'unknown').toUpperCase()} • ${report.status.replace('_',' ').toUpperCase()}</div>
-        </div>`,
-        { direction: 'top', className: '', offset: [0, -8] }
-      )
       markersRef.current.push(marker)
     })
   }, [reports])
 
-  function setFilter(key: keyof ReportFilters, value: string | undefined) {
-    setFilters(f => ({ ...f, [key]: value || undefined, page: 1 }))
-  }
-
   return (
-    <div className="relative flex flex-col h-full">
-      {/* Filter bar */}
-      <div className="relative z-20 flex items-center gap-2 px-4 py-3 border-b border-[#2a2d3e] bg-[#13151f]/95 backdrop-blur-sm">
-        <span className="text-xs text-slate-400 mr-1 font-medium">FILTER</span>
-
-        {/* Category */}
-        <select
-          value={filters.category ?? ''}
-          onChange={e => setFilter('category', e.target.value as any)}
-          className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-slate-200 cursor-pointer focus:outline-none focus:border-orange-500"
-        >
-          <option value="">All Categories</option>
-          {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{CATEGORY_ICON[c]} {c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
-
-        {/* Severity */}
-        <select
-          value={filters.severity ?? ''}
-          onChange={e => setFilter('severity', e.target.value as any)}
-          className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-slate-200 cursor-pointer focus:outline-none focus:border-orange-500"
-        >
-          <option value="">All Severities</option>
-          {SEVERITY_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-        </select>
-
-        {/* Status */}
-        <select
-          value={filters.status ?? ''}
-          onChange={e => setFilter('status', e.target.value as any)}
-          className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-slate-200 cursor-pointer focus:outline-none focus:border-orange-500"
-        >
-          <option value="">All Statuses</option>
-          {['pending','assigned','in_review','resolved'].map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
-        </select>
-
-        {/* Authority */}
-        <input
-          placeholder="Authority (e.g. RDA)"
-          value={filters.authority ?? ''}
-          onChange={e => setFilter('authority', e.target.value)}
-          className="text-xs bg-[#1e2130] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500 w-36"
-        />
-
-        <div className="ml-auto flex items-center gap-2">
-          {loading && (
-            <div className="flex items-center gap-1.5 text-xs text-orange-400">
-              <div className="w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin" />
-              Loading…
-            </div>
-          )}
-          {!loading && (
-            <span className="text-xs text-slate-400">
-              <span className="text-orange-400 font-semibold">{total}</span> reports
-            </span>
-          )}
+    <div className="relative h-full w-full">
+      {/* Loading indicator */}
+      {loading && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-600 shadow-sm">
+          Loading reports…
         </div>
+      )}
 
-        {/* Legend */}
-        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-[#2a2d3e]">
-          {(['critical','high','medium','low'] as ReportSeverity[]).map(s => (
-            <div key={s} className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: SEVERITY_COLOR[s] }} />
-              <span className="text-[10px] text-slate-400 capitalize">{s}</span>
+      {/* Map container */}
+      <div ref={containerRef} className="h-full w-full" />
+
+      {/* Selected report card */}
+      {selected && (
+        <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-center">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-lg max-w-md w-full p-4">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h3 className="font-semibold text-slate-800 leading-snug">
+                {selected.title}
+              </h3>
+              <button
+                onClick={() => setSelected(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+              {selected.description}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <StatusBadge status={selected.status} />
+              <span className="text-slate-400 capitalize">
+                {selected.category || 'Uncategorized'}
+              </span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-400 capitalize">
+                {selected.severity || 'Unknown'} severity
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simple legend */}
+      <div className="absolute bottom-4 left-4 z-10 bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-sm hidden sm:block">
+        <p className="text-[10px] font-medium text-slate-500 mb-1.5">Severity</p>
+        <div className="flex flex-col gap-1">
+          {Object.entries(SEVERITY_COLORS).map(([key, color]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-[10px] text-slate-600 capitalize">{key}</span>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Map */}
-      <div ref={containerRef} className="flex-1 z-0" />
-
-      {/* No results overlay */}
-      {!loading && reports.length === 0 && (
-        <div className="absolute inset-0 top-14 flex items-center justify-center pointer-events-none z-10">
-          <div className="bg-[#1a1d2e]/90 backdrop-blur-sm border border-[#2a2d3e] rounded-2xl px-8 py-6 text-center">
-            <div className="text-3xl mb-2">📍</div>
-            <p className="text-slate-300 font-medium">No reports found</p>
-            <p className="text-slate-500 text-sm mt-1">Try adjusting your filters</p>
-          </div>
-        </div>
-      )}
-
-      {/* Selected report panel */}
-      {selected && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-          <div className="max-w-xl mx-auto">
-            <ReportCard report={selected} onClose={() => setSelected(null)} expanded />
-          </div>
-        </div>
-      )}
     </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    analyzing: 'bg-sky-50 text-sky-700 border-sky-200',
+    assigned: 'bg-blue-50 text-blue-700 border-blue-200',
+    in_progress: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    closed: 'bg-slate-100 text-slate-600 border-slate-200',
+  }
+
+  const style = styles[status] || styles.pending
+
+  return (
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border capitalize ${style}`}>
+      {status?.replace('_', ' ') || 'Unknown'}
+    </span>
   )
 }

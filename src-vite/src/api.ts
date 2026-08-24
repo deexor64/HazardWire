@@ -64,3 +64,7 @@ export async function updateMe(token: string, updates: Record<string, string>) {
 export async function deleteMe(token: string) {
   return request('/orgs/profile', { method: 'DELETE' }, token)
 }
+
+export async function getReportUpdates(reportId: string) {
+  return request(`/reports/${reportId}/updates`)
+}
