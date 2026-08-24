@@ -14,6 +14,7 @@ export default function SubmitView() {
   const [description, setDescription] = useState('')
   const [latitude, setLatitude] = useState<number | undefined>()
   const [longitude, setLongitude] = useState<number | undefined>()
+  const [files, setFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -59,6 +60,28 @@ export default function SubmitView() {
     }
   }, [])
 
+  async function uploadImages(files: File[]): Promise<string[]> {
+    const urls: string[] = []
+
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/reports/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const json = await res.json()
+
+      if (!json.status) {
+        throw new Error(json.result || 'Image upload failed')
+      }
+      urls.push(json.result.url)
+    }
+
+    return urls
+  }
+
   async function handleSubmit() {
     if (!tokenConfirmed) {
       setError('Please confirm that you have saved your access token.')
@@ -73,11 +96,17 @@ export default function SubmitView() {
     setError('')
 
     try {
+      let media_urls: string[] = []
+      if (files.length > 0) {
+        media_urls = await uploadImages(files)
+      }
+
       await submitReport({
         title: title.trim(),
         description: description.trim(),
         latitude,
         longitude,
+        media_urls,
         token,
       })
       setSuccess(true)
@@ -94,12 +123,12 @@ export default function SubmitView() {
     setDescription('')
     setLatitude(undefined)
     setLongitude(undefined)
+    setFiles([])
     setTokenConfirmed(false)
     setToken(generateToken())
     setError('')
   }
 
-  // Success screen
   if (success) {
     return (
       <div className="max-w-lg mx-auto">
@@ -107,22 +136,16 @@ export default function SubmitView() {
           <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-2xl mx-auto mb-5">
             ✓
           </div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-2">
-            Report Submitted
-          </h2>
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">Report Submitted</h2>
           <p className="text-slate-600 text-sm mb-6">
             Your report has been received. Please save the token below. You will need it to check the status of your report later.
           </p>
 
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-2">
             <p className="text-xs text-slate-500 mb-1.5 font-medium">Your Access Token</p>
-            <p className="font-mono text-sm text-slate-800 break-all select-all">
-              {token}
-            </p>
+            <p className="font-mono text-sm text-slate-800 break-all select-all">{token}</p>
           </div>
-          <p className="text-xs text-slate-500 mb-6">
-            We cannot recover this token if you lose it.
-          </p>
+          <p className="text-xs text-slate-500 mb-6">We cannot recover this token if you lose it.</p>
 
           <button
             onClick={resetForm}
@@ -150,14 +173,12 @@ export default function SubmitView() {
         </div>
       )}
 
-      {/* Token Section - Most important for the user */}
+      {/* Token */}
       <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
         <div className="flex items-start gap-2 mb-3">
           <span className="text-amber-600 font-bold text-sm">1</span>
           <div>
-            <p className="text-sm font-semibold text-amber-900">
-              Save your private access token
-            </p>
+            <p className="text-sm font-semibold text-amber-900">Save your private access token</p>
             <p className="text-xs text-amber-700 mt-0.5">
               You will need this token later to view or track your report. Keep it private.
             </p>
@@ -165,9 +186,7 @@ export default function SubmitView() {
         </div>
 
         <div className="bg-white border border-amber-200 rounded-lg p-3 mb-3">
-          <p className="font-mono text-sm text-slate-800 break-all select-all">
-            {token}
-          </p>
+          <p className="font-mono text-sm text-slate-800 break-all select-all">{token}</p>
         </div>
 
         <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
@@ -208,10 +227,33 @@ export default function SubmitView() {
           />
         </div>
 
+        {/* Image Upload */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Location
+            Photos (optional)
           </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              if (e.target.files) {
+                setFiles(Array.from(e.target.files))
+              }
+            }}
+            className="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3
+                       file:rounded-lg file:border-0 file:text-sm file:font-medium
+                       file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+          />
+          {files.length > 0 && (
+            <p className="text-xs text-slate-500 mt-1.5">
+              {files.length} file{files.length > 1 ? 's' : ''} selected
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
           <p className="text-xs text-slate-500 mb-2">
             Click on the map to mark the location of the hazard (optional but helpful)
           </p>
@@ -230,8 +272,7 @@ export default function SubmitView() {
           onClick={handleSubmit}
           disabled={submitting || !tokenConfirmed}
           className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg
-                     hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-colors"
+                     hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? 'Submitting Report…' : 'Submit Report'}
         </button>

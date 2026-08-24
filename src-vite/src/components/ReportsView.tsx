@@ -17,6 +17,10 @@ export default function ReportsView() {
   }, [])
 
   if (selected) {
+    const images = selected.media_urls?.length
+      ? selected.media_urls
+      : selected.raw_media_urls || []
+
     return (
       <div className="max-w-xl mx-auto">
         <button
@@ -38,6 +42,19 @@ export default function ReportsView() {
             <p className="text-sm text-slate-600 leading-relaxed">
               {selected.description}
             </p>
+
+            {images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {images.map((url: string, i: number) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt=""
+                    className="h-28 rounded-lg object-cover border border-slate-200"
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <InfoItem label="Category" value={selected.category || '—'} />
@@ -90,37 +107,54 @@ export default function ReportsView() {
         </div>
       ) : (
         <div className="space-y-3">
-          {reports.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setSelected(r)}
-              className="w-full text-left bg-white border border-slate-200 rounded-xl p-4
-                         hover:border-slate-300 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="font-medium text-slate-800 leading-snug">
-                  {r.title}
-                </h2>
-                <StatusBadge status={r.status} />
-              </div>
+          {reports.map((r) => {
+            const images = r.media_urls?.length ? r.media_urls : r.raw_media_urls || []
+            const thumb = images[0] || null
 
-              <p className="text-sm text-slate-500 mt-1.5 line-clamp-2">
-                {r.description}
-              </p>
+            return (
+              <button
+                key={r.id}
+                onClick={() => setSelected(r)}
+                className="w-full text-left bg-white border border-slate-200 rounded-xl p-4
+                           hover:border-slate-300 transition-colors"
+              >
+                <div className="flex gap-3">
+                  {thumb && (
+                    <img
+                      src={thumb}
+                      alt=""
+                      className="w-16 h-16 rounded-lg object-cover border border-slate-100 shrink-0"
+                    />
+                  )}
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-slate-400">
-                <span className="capitalize">{r.category || 'Uncategorized'}</span>
-                <span>·</span>
-                <span className="capitalize">{r.severity || 'Unknown'}</span>
-                <span>·</span>
-                <span>
-                  {r.submitted_at
-                    ? new Date(r.submitted_at).toLocaleDateString()
-                    : '—'}
-                </span>
-              </div>
-            </button>
-          ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="font-medium text-slate-800 leading-snug">
+                        {r.title}
+                      </h2>
+                      <StatusBadge status={r.status} />
+                    </div>
+
+                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                      {r.description}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-400">
+                      <span className="capitalize">{r.category || 'Uncategorized'}</span>
+                      <span>·</span>
+                      <span className="capitalize">{r.severity || 'Unknown'}</span>
+                      <span>·</span>
+                      <span>
+                        {r.submitted_at
+                          ? new Date(r.submitted_at).toLocaleDateString()
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

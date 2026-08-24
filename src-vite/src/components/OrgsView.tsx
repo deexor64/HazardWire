@@ -297,24 +297,40 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
             </div>
           ) : (
             <div className="space-y-3">
-              {reports.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    setSelected(r)
-                    setNewStatus(
-                      ['pending', 'assigned'].includes(r.status) ? 'in_progress' : r.status
-                    )
-                  }}
-                  className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-medium text-slate-800">{r.title}</h3>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{r.description}</p>
-                </button>
-              ))}
+              {reports.map((r) => {
+                const images = r.media_urls?.length ? r.media_urls : r.raw_media_urls || []
+                const thumb = images[0] || null
+
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => {
+                      setSelected(r)
+                      setNewStatus(
+                        ['pending', 'assigned'].includes(r.status) ? 'in_progress' : r.status
+                      )
+                    }}
+                    className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300"
+                  >
+                    <div className="flex gap-3">
+                      {thumb && (
+                        <img
+                          src={thumb}
+                          alt=""
+                          className="w-14 h-14 rounded-lg object-cover border border-slate-100 shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-medium text-slate-800">{r.title}</h3>
+                          <StatusBadge status={r.status} />
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">{r.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </>
