@@ -38,8 +38,11 @@ export async function getReportByToken(token: string) {
 
 // ── Orgs ─────────────────────────────────────────────────────────────────────
 
-export async function orgSignup(email: string, password: string) {
-  return request('/orgs/signup', { method: 'POST', body: JSON.stringify({ email, password }) })
+export async function orgSignup(name: string, email: string, password: string) {
+  return request('/orgs/signup', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
+  })
 }
 
 export async function orgLogin(email: string, password: string) {

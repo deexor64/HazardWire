@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { View, AuthState } from './types'
 import MapView from './components/MapView'
 import ReportsView from './components/ReportsView'
@@ -14,9 +14,24 @@ const NAV_ITEMS: { id: View; label: string }[] = [
   { id: 'orgs', label: 'Organizations' },
 ]
 
+const defaultAuth: AuthState = { token: null, userId: null, email: null, profile: null }
+
 export default function App() {
   const [view, setView] = useState<View>('map')
-  const [auth, setAuth] = useState<AuthState>({ token: null, userId: null, email: null, profile: null })
+  const [auth, setAuth] = useState<AuthState>(() => {
+    // Load from localStorage on first render
+    const saved = localStorage.getItem('hazardwire_auth')
+    return saved ? JSON.parse(saved) : defaultAuth
+  })
+
+  // Save to localStorage whenever auth changes
+  useEffect(() => {
+    if (auth.token) {
+      localStorage.setItem('hazardwire_auth', JSON.stringify(auth))
+    } else {
+      localStorage.removeItem('hazardwire_auth')
+    }
+  }, [auth])
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
