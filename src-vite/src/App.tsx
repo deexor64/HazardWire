@@ -5,13 +5,15 @@ import ReportsView from './components/ReportsView'
 import MyReportsView from './components/MyReportsView'
 import SubmitView from './components/SubmitView'
 import OrgsView from './components/OrgsView'
+import AuthoritiesView from './components/AuthoritiesView'
 
 const NAV_ITEMS: { id: View; label: string }[] = [
   { id: 'map', label: 'Map' },
   { id: 'reports', label: 'Reports' },
   { id: 'submit', label: 'Submit Report' },
   { id: 'my-reports', label: 'My Report' },
-  { id: 'orgs', label: 'Organizations' },
+  { id: 'authorities', label: 'Authorities' },
+  { id: 'orgs', label: 'Org Login' },
 ]
 
 const defaultAuth: AuthState = {
@@ -86,6 +88,7 @@ export default function App() {
         {view === 'reports' && <ReportsView />}
         {view === 'submit' && <SubmitView />}
         {view === 'my-reports' && <MyReportsView />}
+        {view === 'authorities' && <AuthoritiesView />}
         {view === 'orgs' && <OrgsView auth={auth} onAuth={setAuth} />}
       </main>
     </div>

@@ -53,6 +53,10 @@ export async function orgLogout(token: string) {
   return request('/orgs/logout', { method: 'POST' }, token)
 }
 
+export async function getPublicOrganizations() {
+  return request('/orgs/public')
+}
+
 export async function getMe(token: string) {
   return request('/orgs/profile', undefined, token)
 }

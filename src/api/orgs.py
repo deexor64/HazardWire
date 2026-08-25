@@ -68,6 +68,22 @@ async def get_profile(user: User = Depends(get_current_user)):
     return JSONResponse({"status": res.status, "result": res.result})
 
 
+@router.get("/public")
+async def list_public_organizations():
+    try:
+        res = (
+            supabase.table("organizations")
+            .select(
+                "id, name, authority_type, phone, address, website, description, verified"
+            )
+            .order("name")
+            .execute()
+        )
+        return JSONResponse({"status": True, "result": res.data or []})
+    except Exception as e:
+        return JSONResponse({"status": False, "result": str(e)})
+
+
 @router.put("/profile")
 async def update_profile(
     form: OrgProfileUpdate, user: User = Depends(get_current_user)
