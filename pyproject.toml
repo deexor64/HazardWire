@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "deexor64",email = "191124667+deexor64@users.noreply.github.com"},
 ]
-dependencies = ["fastapi[standard]>=0.141.1", "passlib[bcrypt]>=1.7.4", "python-jose[cryptography]>=3.5.0", "pydantic-settings>=2.15.0", "supabase>=2.31.0", "python-dotenv>=1.2.3"]
+dependencies = ["fastapi[standard]>=0.141.1", "passlib[bcrypt]>=1.7.4", "python-jose[cryptography]>=3.5.0", "pydantic-settings>=2.15.0", "supabase>=2.31.0", "python-dotenv>=1.2.3", "google-generativeai>=0.8.6"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
@@ -18,3 +18,5 @@ distribution = false
 [tool.pdm.scripts]
 dev = "fastapi dev src/main.py"
 start = "fastapi run src/main.py"
+
+worker = "python3 -m src.worker"

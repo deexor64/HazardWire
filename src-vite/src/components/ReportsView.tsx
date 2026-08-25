@@ -96,6 +96,15 @@ export default function ReportsView() {
               />
             </div>
 
+            {selected.ai_analysis && (
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-xs font-medium text-slate-500 mb-1.5">System analysis</p>
+                <p className="text-sm text-slate-600">
+                  {selected.ai_analysis.summary || '—'}
+                </p>
+              </div>
+            )}
+
             <ReportUpdates reportId={selected.id} />
           </div>
         </div>

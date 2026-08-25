@@ -453,6 +453,17 @@ function OrgDashboard({ auth, onAuth }: { auth: AuthState; onAuth: (s: AuthState
                 </select>
               </div>
 
+              {selected.ai_analysis && (
+                <div className="pt-3 border-t border-slate-100">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    System analysis
+                  </label>
+                  <p className="text-sm text-slate-600">
+                    {selected.ai_analysis.summary || '—'}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Comment (optional)

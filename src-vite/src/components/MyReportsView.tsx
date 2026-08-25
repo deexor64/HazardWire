@@ -103,6 +103,22 @@ export default function MyReportsView() {
               />
             </div>
 
+            {/* AI Analysis */}
+            {report.ai_analysis && (
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-xs font-medium text-slate-500 mb-1.5">System analysis</p>
+                <p className="text-sm text-slate-600">
+                  {report.ai_analysis.summary || '—'}
+                </p>
+                {report.ai_analysis.cleaned_description &&
+                  report.ai_analysis.cleaned_description !== report.description && (
+                    <p className="text-sm text-slate-500 mt-2">
+                      {report.ai_analysis.cleaned_description}
+                    </p>
+                  )}
+              </div>
+            )}
+
             {/* Updates / Comments */}
             <ReportUpdates reportId={report.id} />
           </div>

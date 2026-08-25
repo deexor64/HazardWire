@@ -1,6 +1,7 @@
 import time
 from datetime import datetime, timezone
 
+from .ai import analyze_report
 from .core.client import supabase
 
 
@@ -136,7 +137,7 @@ def process_job(job: dict):
             raise Exception("Report not found")
 
         # 2. Analyze
-        analysis = analyze_report_with_ai(
+        analysis = analyze_report(
             title=report.get("title") or "",
             description=report.get("description") or "",
         )

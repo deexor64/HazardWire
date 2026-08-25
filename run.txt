@@ -1,8 +1,0 @@
-# python
-pdm run dev
-
-# vite
-npm run dev
-
-# worker
-pdm run python -m src.worker
