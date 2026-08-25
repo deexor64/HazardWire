@@ -95,18 +95,26 @@ async def delete_profile(user: User = Depends(get_current_user)):
 
 @router.get("/reports")
 async def get_assigned_reports(user: User = Depends(get_current_user)):
-    # For now: return all pending + assigned reports
-    result = reports.get_reports(status=None, page=1, page_size=50)
-    # Filter only pending and assigned
-    if result.status and result.result.get("results"):
-        filtered = [
-            r
-            for r in result.result["results"]
-            if r.get("status") in ("pending", "assigned", "analyzing", "in_progress")
-        ]
-        result.result["results"] = filtered
-        result.result["total"] = len(filtered)
-    return JSONResponse({"status": result.status, "result": result.result})
+    try:
+        res = (
+            supabase.table("reports")
+            .select("*")
+            .eq("authority_id", str(user.id))
+            .order("submitted_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+        return JSONResponse(
+            {
+                "status": True,
+                "result": {
+                    "total": len(res.data or []),
+                    "results": res.data or [],
+                },
+            }
+        )
+    except Exception as e:
+        return JSONResponse({"status": False, "result": str(e)})
 
 
 @router.patch("/reports/{report_id}")

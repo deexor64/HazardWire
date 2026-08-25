@@ -1,20 +1,43 @@
 import { useState, useEffect } from 'react'
 import { getReports } from '../api'
 
+const CATEGORIES = [
+  'road', 'water', 'electricity', 'garbage',
+  'drainage', 'environment', 'other'
+]
+
+const STATUSES = [
+  'pending', 'assigned', 'in_progress', 'resolved', 'closed'
+]
+
 export default function ReportsView() {
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<any>(null)
 
-  useEffect(() => {
-    getReports()
+  const [category, setCategory] = useState('')
+  const [status, setStatus] = useState('')
+
+  function loadReports() {
+    setLoading(true)
+    setError('')
+
+    const filters: any = { page_size: 50 }
+    if (category) filters.category = category
+    if (status) filters.status = status
+
+    getReports(filters)
       .then((res: any) => {
         setReports(res.result?.results || [])
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => {
+    loadReports()
+  }, [category, status])
 
   if (selected) {
     const images = selected.media_urls?.length
@@ -25,26 +48,22 @@ export default function ReportsView() {
       <div className="max-w-xl mx-auto">
         <button
           onClick={() => setSelected(null)}
-          className="text-sm text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1"
+          className="text-sm text-slate-500 hover:text-slate-800 mb-4"
         >
           ← Back to all reports
         </button>
 
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
-            <h2 className="font-semibold text-slate-800 leading-snug">
-              {selected.title}
-            </h2>
+            <h2 className="font-semibold text-slate-800">{selected.title}</h2>
             <StatusBadge status={selected.status} />
           </div>
 
           <div className="px-5 py-4 space-y-4">
-            <p className="text-sm text-slate-600 leading-relaxed">
-              {selected.description}
-            </p>
+            <p className="text-sm text-slate-600">{selected.description}</p>
 
             {images.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto">
                 {images.map((url: string, i: number) => (
                   <img
                     key={i}
@@ -91,6 +110,47 @@ export default function ReportsView() {
         </p>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700"
+        >
+          <option value="">All Categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c.charAt(0).toUpperCase() + c.slice(1)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700"
+        >
+          <option value="">All Statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s.replace('_', ' ')}
+            </option>
+          ))}
+        </select>
+
+        {(category || status) && (
+          <button
+            onClick={() => {
+              setCategory('')
+              setStatus('')
+            }}
+            className="text-sm text-slate-500 hover:text-slate-800"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {error && (
         <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
@@ -98,13 +158,9 @@ export default function ReportsView() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-slate-500 text-sm">
-          Loading reports…
-        </div>
+        <div className="text-center py-16 text-slate-500 text-sm">Loading reports…</div>
       ) : reports.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-slate-500 text-sm">No reports found yet.</p>
-        </div>
+        <div className="text-center py-16 text-slate-500 text-sm">No reports found.</div>
       ) : (
         <div className="space-y-3">
           {reports.map((r) => {
@@ -115,8 +171,7 @@ export default function ReportsView() {
               <button
                 key={r.id}
                 onClick={() => setSelected(r)}
-                className="w-full text-left bg-white border border-slate-200 rounded-xl p-4
-                           hover:border-slate-300 transition-colors"
+                className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300"
               >
                 <div className="flex gap-3">
                   {thumb && (
@@ -126,20 +181,13 @@ export default function ReportsView() {
                       className="w-16 h-16 rounded-lg object-cover border border-slate-100 shrink-0"
                     />
                   )}
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                      <h2 className="font-medium text-slate-800 leading-snug">
-                        {r.title}
-                      </h2>
+                      <h2 className="font-medium text-slate-800">{r.title}</h2>
                       <StatusBadge status={r.status} />
                     </div>
-
-                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">
-                      {r.description}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-400">
+                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">{r.description}</p>
+                    <div className="flex flex-wrap gap-x-3 mt-2 text-xs text-slate-400">
                       <span className="capitalize">{r.category || 'Uncategorized'}</span>
                       <span>·</span>
                       <span className="capitalize">{r.severity || 'Unknown'}</span>
@@ -170,13 +218,10 @@ function StatusBadge({ status }: { status: string }) {
     resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     closed: 'bg-slate-100 text-slate-600 border-slate-200',
   }
-
   const style = styles[status] || styles.pending
 
   return (
-    <span
-      className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize shrink-0 ${style}`}
-    >
+    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize shrink-0 ${style}`}>
       {status?.replace('_', ' ') || 'Unknown'}
     </span>
   )

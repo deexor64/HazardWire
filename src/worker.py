@@ -1,40 +1,24 @@
-import json
 import time
 from datetime import datetime, timezone
 
 from .core.client import supabase
 
 
-# You can later switch to OpenAI / Gemini. For now we use a simple placeholder.
-# Replace this function with real LLM call later.
 def analyze_report_with_ai(title: str, description: str) -> dict:
-    """
-    Minimal AI analysis.
-    Later replace this with real Gemini / OpenAI call.
-    """
     text = (title + " " + description).lower()
 
-    # Very basic keyword matching (temporary)
-    if any(word in text for word in ["pothole", "road", "crack", "asphalt"]):
-        category = "road"
-        severity = "medium"
-        authority_type = "road"
-    elif any(word in text for word in ["water", "leak", "pipe", "flood"]):
-        category = "water"
-        severity = "high"
-        authority_type = "water"
-    elif any(word in text for word in ["electric", "wire", "power", "transformer"]):
-        category = "electricity"
-        severity = "high"
-        authority_type = "electricity"
+    if any(word in text for word in ["pothole", "road", "crack", "asphalt", "highway"]):
+        category, severity, authority_type = "road", "medium", "road"
+    elif any(word in text for word in ["water", "leak", "pipe", "flood", "drain"]):
+        category, severity, authority_type = "water", "high", "water"
+    elif any(
+        word in text for word in ["electric", "wire", "power", "transformer", "current"]
+    ):
+        category, severity, authority_type = "electricity", "high", "electricity"
     elif any(word in text for word in ["garbage", "trash", "waste", "dump"]):
-        category = "garbage"
-        severity = "low"
-        authority_type = "garbage"
+        category, severity, authority_type = "garbage", "low", "garbage"
     else:
-        category = "other"
-        severity = "medium"
-        authority_type = "other"
+        category, severity, authority_type = "other", "medium", "other"
 
     return {
         "category": category,
@@ -45,40 +29,88 @@ def analyze_report_with_ai(title: str, description: str) -> dict:
     }
 
 
+def find_organization(authority_type: str):
+    if not authority_type or authority_type == "other":
+        return None
+
+    try:
+        res = (
+            supabase.table("organizations")
+            .select("id")
+            .ilike("authority_type", f"%{authority_type}%")
+            .limit(1)
+            .execute()
+        )
+        if res.data and len(res.data) > 0:
+            return res.data[0]["id"]
+
+        res = (
+            supabase.table("organizations")
+            .select("id")
+            .ilike("name", f"%{authority_type}%")
+            .limit(1)
+            .execute()
+        )
+        if res.data and len(res.data) > 0:
+            return res.data[0]["id"]
+    except Exception as e:
+        print(f"  Organization lookup failed: {e}")
+
+    return None
+
+
 def get_pending_jobs(limit: int = 5):
-    res = (
-        supabase.table("jobs")
-        .select("*")
-        .eq("status", "pending")
-        .order("created_at")
-        .limit(limit)
-        .execute()
-    )
-    return res.data or []
+    try:
+        res = (
+            supabase.table("jobs")
+            .select("*")
+            .eq("status", "pending")
+            .order("created_at")
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+    except Exception as e:
+        print(f"Failed to fetch jobs: {e}")
+        return []
 
 
 def lock_job(job_id: int):
-    # Get current attempts
-    current = (
-        supabase.table("jobs").select("attempts").eq("id", job_id).single().execute()
-    )
-    attempts = current.data["attempts"] + 1 if current.data else 1
+    try:
+        current = (
+            supabase.table("jobs")
+            .select("attempts")
+            .eq("id", job_id)
+            .maybe_single()
+            .execute()
+        )
+        attempts = 1
+        if current and current.data:
+            attempts = (current.data.get("attempts") or 0) + 1
 
-    supabase.table("jobs").update(
-        {
-            "status": "processing",
-            "locked_at": datetime.now(timezone.utc).isoformat(),
-            "attempts": attempts,
-        }
-    ).eq("id", job_id).execute()
+        supabase.table("jobs").update(
+            {
+                "status": "processing",
+                "locked_at": datetime.now(timezone.utc).isoformat(),
+                "attempts": attempts,
+            }
+        ).eq("id", job_id).execute()
+    except Exception as e:
+        print(f"  Failed to lock job {job_id}: {e}")
 
 
 def complete_job(job_id: int):
-    supabase.table("jobs").update({"status": "done"}).eq("id", job_id).execute()
+    try:
+        supabase.table("jobs").update({"status": "done"}).eq("id", job_id).execute()
+    except Exception as e:
+        print(f"  Failed to complete job {job_id}: {e}")
 
 
 def fail_job(job_id: int):
-    supabase.table("jobs").update({"status": "failed"}).eq("id", job_id).execute()
+    try:
+        supabase.table("jobs").update({"status": "failed"}).eq("id", job_id).execute()
+    except Exception as e:
+        print(f"  Failed to fail job {job_id}: {e}")
 
 
 def process_job(job: dict):
@@ -92,30 +124,47 @@ def process_job(job: dict):
 
         # 1. Get the report
         report_res = (
-            supabase.table("reports").select("*").eq("id", report_id).single().execute()
+            supabase.table("reports")
+            .select("*")
+            .eq("id", report_id)
+            .maybe_single()
+            .execute()
         )
-        report = report_res.data
+        report = report_res.data if report_res else None
 
         if not report:
             raise Exception("Report not found")
 
-        # 2. Run AI analysis
+        # 2. Analyze
         analysis = analyze_report_with_ai(
-            title=report.get("title", ""), description=report.get("description", "")
+            title=report.get("title") or "",
+            description=report.get("description") or "",
         )
 
-        # 3. Update the report
-        supabase.table("reports").update(
-            {
-                "category": analysis["category"],
-                "severity": analysis["severity"],
-                "description": analysis["cleaned_description"],
-                "ai_analysis": analysis,
-                "status": "assigned",  # for now we set assigned
-                "analyzed_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-        ).eq("id", report_id).execute()
+        # 3. Find organization (can be None — that's OK)
+        authority_id = find_organization(analysis["authority_type"])
+
+        # 4. Prepare update
+        update_data = {
+            "category": analysis["category"],
+            "severity": analysis["severity"],
+            "description": analysis["cleaned_description"],
+            "ai_analysis": analysis,
+            "status": "assigned" if authority_id else "pending",
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        if authority_id:
+            update_data["authority_id"] = authority_id
+            print(f"  → Assigned to organization {authority_id}")
+        else:
+            print(
+                f"  → No matching organization for '{analysis['authority_type']}' (leaving unassigned)"
+            )
+
+        # 5. Update report
+        supabase.table("reports").update(update_data).eq("id", report_id).execute()
 
         complete_job(job_id)
         print(f"Job {job_id} done → {analysis['category']} / {analysis['severity']}")
