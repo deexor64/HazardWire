@@ -36,8 +36,8 @@ AI-powered civic hazard reporting platform for Sri Lanka.
 9. [x] Auth persistence via localStorage
 10. [x] Organization dashboard (assigned reports + profile)
 11. [x] Map page (light theme)
-12. [ ] Public Authorities directory page
-13. [ ] Comments / update history UI
+12. [x] Public Authorities directory page
+13. [x] Comments / update history UI
 14. [ ] Real LLM analysis
 15. [ ] Image blurring (faces / plates)
 

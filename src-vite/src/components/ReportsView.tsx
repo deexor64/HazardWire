@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getReports } from '../api'
+import { getReports, getReportUpdates } from '../api'
 
 const CATEGORIES = [
   'road', 'water', 'electricity', 'garbage',
@@ -95,6 +95,8 @@ export default function ReportsView() {
                 }
               />
             </div>
+
+            <ReportUpdates reportId={selected.id} />
           </div>
         </div>
       </div>
@@ -232,6 +234,51 @@ function InfoItem({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs text-slate-500 mb-0.5">{label}</p>
       <p className="font-medium text-slate-800 capitalize">{value}</p>
+    </div>
+  )
+}
+
+function ReportUpdates({ reportId }: { reportId: string }) {
+  const [updates, setUpdates] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getReportUpdates(reportId)
+      .then((res: any) => setUpdates(res.result || []))
+      .catch(() => setUpdates([]))
+      .finally(() => setLoading(false))
+  }, [reportId])
+
+  if (loading) {
+    return <p className="text-xs text-slate-400 pt-3">Loading updates…</p>
+  }
+
+  if (updates.length === 0) {
+    return (
+      <div className="pt-3 border-t border-slate-100">
+        <p className="text-xs text-slate-400">No updates from authorities yet.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="pt-4 border-t border-slate-100">
+      <p className="text-xs font-medium text-slate-500 mb-3">Updates from authorities</p>
+      <div className="space-y-3">
+        {updates.map((u) => (
+          <div key={u.id} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <StatusBadge status={u.status || 'updated'} />
+              <span className="text-[11px] text-slate-400">
+                {u.created_at ? new Date(u.created_at).toLocaleString() : ''}
+              </span>
+            </div>
+            {u.comment && (
+              <p className="text-sm text-slate-600 mt-1">{u.comment}</p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

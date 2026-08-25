@@ -174,7 +174,7 @@ def process_job(job: dict):
         fail_job(job_id)
 
 
-def run_worker(poll_interval: int = 5):
+def run_worker(poll_interval: int = 20):
     print("Worker started...")
     while True:
         jobs = get_pending_jobs()
