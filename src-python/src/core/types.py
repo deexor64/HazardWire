@@ -5,10 +5,10 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class DbResult:
-    def __init__(self, status: bool, result: Any):
+class DbResult[Success, Failure]:
+    def __init__(self, status: bool, result: Success | Failure):
         self.status: bool = status
-        self.result: Any = result
+        self.result: Success | Failure = result
 
 
 class ReportCategory(str, Enum):
@@ -66,27 +66,21 @@ class ReportFilter(BaseModel):
     page_size: int = 20
 
 
-class AuthorityType(str, Enum):
+class OrgType(str, Enum):
     GOVERNMENT = "government"
     NON_GOVERNMENT = "non_government"
     OTHER = "other"
 
 
-class OrgSignup(BaseModel):
-    name: str
-    email: str
-    password: str
-
-
-class OrgSignin(BaseModel):
-    email: str
-    password: str
-
+class OrgKind(str, Enum):
+    
 
 class OrgProfileUpdate(BaseModel):
     name: str
-    authority_type: str | None = None
+    email: str
+    authority_type: AuthorityType | None = None
     description: str | None = None
-    phone: str | None = None
-    address: str | None = None
     website: str | None = None
+    logo_url: str | None = None
+    cover_url: str | None = None
+    org_kind: Or | None = None

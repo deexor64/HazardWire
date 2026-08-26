@@ -14,8 +14,11 @@ router = APIRouter(prefix="/orgs")
 @router.post("/signup")
 async def signup(form: OrgSignup):
     res = orgs_auth.signup(form.email, form.password)
+
     if not res.status:
-        return JSONResponse({"status": False, "result": res.result})
+        return JSONResponse(
+            status_code=400, content={"status": False, "result": "Failed to signup"}
+        )
 
     user: User = res.result.user
     session: Session = res.result.session
