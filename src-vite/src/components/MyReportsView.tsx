@@ -105,17 +105,21 @@ export default function MyReportsView() {
 
             {/* AI Analysis */}
             {report.ai_analysis && (
-              <div className="pt-3 border-t border-slate-100">
-                <p className="text-xs font-medium text-slate-500 mb-1.5">System analysis</p>
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <p className="text-xs font-medium text-slate-500">System analysis</p>
                 <p className="text-sm text-slate-600">
                   {report.ai_analysis.summary || '—'}
                 </p>
-                {report.ai_analysis.cleaned_description &&
-                  report.ai_analysis.cleaned_description !== report.description && (
-                    <p className="text-sm text-slate-500 mt-2">
-                      {report.ai_analysis.cleaned_description}
-                    </p>
-                  )}
+                {report.ai_analysis.explanation && (
+                  <p className="text-sm text-slate-500">
+                    {report.ai_analysis.explanation}
+                  </p>
+                )}
+                {typeof report.ai_analysis.priority_score === 'number' && (
+                  <p className="text-xs text-slate-400">
+                    Priority score: {report.ai_analysis.priority_score}/100
+                  </p>
+                )}
               </div>
             )}
 

@@ -7,27 +7,17 @@ import SubmitView from './components/SubmitView'
 import OrgsView from './components/OrgsView'
 import AuthoritiesView from './components/AuthoritiesView'
 
-const NAV_ITEMS: { id: View; label: string }[] = [
-  { id: 'map', label: 'Map' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'submit', label: 'Submit Report' },
-  { id: 'my-reports', label: 'My Report' },
-  { id: 'authorities', label: 'Authorities' },
-  { id: 'orgs', label: 'Org Login' },
-]
-
-const defaultAuth: AuthState = {
-  token: null,
-  userId: null,
-  email: null,
-  profile: null,
-}
 
 export default function App() {
   const [view, setView] = useState<View>('map')
   const [auth, setAuth] = useState<AuthState>(() => {
     const saved = localStorage.getItem('hazardwire_auth')
-    return saved ? JSON.parse(saved) : defaultAuth
+    return saved ? JSON.parse(saved) : {
+      token: null,
+      userId: null,
+      email: null,
+      profile: null,
+    }
   })
 
   useEffect(() => {
@@ -43,6 +33,7 @@ export default function App() {
       {/* Top Navigation */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          {/* Log and title */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
               H
@@ -50,24 +41,17 @@ export default function App() {
             <span className="font-semibold text-slate-800">HazardWire</span>
           </div>
 
+          {/* Nav buttons */}
           <nav className="flex items-center gap-1 overflow-x-auto">
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setView(item.id)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
-                  view === item.id
-                    ? item.id === 'submit'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-slate-800 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+            <NavItem id="map" label="Map" view={view} setView={setView} />
+            <NavItem id="reports" label="Reports" view={view} setView={setView} />
+            <NavItem id="submit" label="Submit" view={view} setView={setView} />
+            <NavItem id="my-reports" label="My Reports" view={view} setView={setView} />
+            <NavItem id="authorities" label="Authorities" view={view} setView={setView} />
+            <NavItem id="orgs" label="Organization" view={view} setView={setView} />
           </nav>
 
+          {/* Auth state */}
           <div className="text-sm text-slate-500 shrink-0 hidden sm:block">
             {auth.token ? (
               <span className="text-emerald-600 font-medium">{auth.email}</span>
@@ -93,4 +77,21 @@ export default function App() {
       </main>
     </div>
   )
+}
+
+
+function NavItem({ id, label, view, setView }: { id: View; label: string; view: string; setView: React.Dispatch<React.SetStateAction<View>> }) {
+  return <button
+    key={id}
+    onClick={() => setView(id)}
+    className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+      view === id
+        ? id === 'submit'
+          ? 'bg-orange-500 text-white'
+          : 'bg-slate-800 text-white'
+        : 'text-slate-600 hover:bg-slate-100'
+    }`}
+  >
+    {label}
+  </button>
 }

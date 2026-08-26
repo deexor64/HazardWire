@@ -136,10 +136,12 @@ def process_job(job: dict):
         if not report:
             raise Exception("Report not found")
 
-        # 2. Analyze
+        # 2. Analyze (text + images)
+        image_urls = report.get("media_urls") or report.get("raw_media_urls") or []
         analysis = analyze_report(
             title=report.get("title") or "",
             description=report.get("description") or "",
+            image_urls=image_urls,
         )
 
         # 3. Find organization (can be None — that's OK)

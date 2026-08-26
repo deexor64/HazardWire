@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY
 
+// Client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Uploads a media file to Supabase storage
 export async function uploadMedia(file: File): Promise<string> {
   const fileExt = file.name.split('.').pop()
   const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`

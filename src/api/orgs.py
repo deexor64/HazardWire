@@ -5,7 +5,7 @@ from supabase_auth import User
 from api.types import OrgProfileUpdate, OrgSignin, OrgSignup
 from core.client import supabase
 from core.dependencies import get_current_user
-from db import orgs, reports
+from db import orgs
 
 router = APIRouter(prefix="/orgs")
 
