@@ -1,10 +1,7 @@
-import MyReportsView from '@/components/MyReportsView'
+import MyReportClient from "./MyReportsClient";
 
-export const metadata = {
-  title: 'My Report – HazardWire',
-  description: 'Look up the status of your submitted report using your private access token.',
-}
+export const metadata = { title: "My Report – HazardWire" };
 
-export default function MyReportsPage() {
-  return <MyReportsView />
+export default function MyReportPage() {
+  return <MyReportClient />;
 }

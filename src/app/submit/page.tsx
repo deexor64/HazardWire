@@ -1,10 +1,10 @@
-import SubmitView from '@/components/SubmitView'
+import SubmitForm from "./SubmitForm";
 
 export const metadata = {
-  title: 'Submit a Report – HazardWire',
-  description: 'Report a hazard in your community — potholes, water leaks, power outages and more.',
-}
+  title: "Submit a Report – HazardWire",
+  description: "Report a hazard in your community.",
+};
 
 export default function SubmitPage() {
-  return <SubmitView />
+  return <SubmitForm />;
 }

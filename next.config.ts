@@ -2,11 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
+    const worker = process.env.WORKER_API_URL || "http://127.0.0.1:8000";
     return [
-      {
-        source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
-      },
+      // only paths that truly exist on FastAPI
+      { source: "/api/worker/:path*", destination: `${worker}/:path*` },
     ];
   },
 };

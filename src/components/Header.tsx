@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuth } from '@/components/AuthProvider'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Map' },
-  { href: '/reports', label: 'Reports' },
-  { href: '/submit', label: 'Submit' },
-  { href: '/my-reports', label: 'My Reports' },
-  { href: '/authorities', label: 'Authorities' },
-  { href: '/orgs', label: 'Organization' },
-]
+  { href: "/", label: "Map" },
+  { href: "/reports", label: "Reports" },
+  { href: "/submit", label: "Submit" },
+  { href: "/my-reports", label: "My Reports" },
+  { href: "/organizations", label: "Organizations" }, // public directory
+  { href: "/orgs", label: "Org Login" }, // portal
+];
 
 export default function Header() {
-  const pathname = usePathname()
-  const { auth } = useAuth()
+  const pathname = usePathname();
+  const { auth } = useAuth();
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -31,22 +31,23 @@ export default function Header() {
         {/* Nav links */}
         <nav className="flex items-center gap-1 overflow-x-auto">
           {NAV_ITEMS.map(({ href, label }) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+            const isActive =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
-                    ? href === '/submit'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-slate-800 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? href === "/submit"
+                      ? "bg-orange-500 text-white"
+                      : "bg-slate-800 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {label}
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -60,5 +61,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }

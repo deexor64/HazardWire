@@ -1,78 +1,93 @@
-export type ReportCategory =
-  | 'road' | 'drainage' | 'water' | 'electricity'
-  | 'garbage' | 'environment' | 'animals' | 'accident' | 'crime' | 'other'
+import type {
+  ReportCategory,
+  ReportPriority,
+  ReportStatus,
+  OrgType,
+  Prisma,
+} from "@/generated/prisma/client";
 
-export type ReportSeverity = 'low' | 'medium' | 'high' | 'critical'
-export type ReportStatus = 'pending' | 'assigned' | 'in_review' | 'resolved'
+/** Report row as returned by list/detail APIs */
+export type ReportListItem = Prisma.ReportGetPayload<{
+  include: {
+    organization: {
+      select: { id: true; name: true; branch_name: true };
+    };
+  };
+}>;
 
-export interface Report {
-  id: string
-  title: string
-  description: string
-  category: ReportCategory
-  severity: ReportSeverity
-  status: ReportStatus
-  authority: string | null
-  latitude: number | null
-  longitude: number | null
-  media_urls: string[]
-  contact_email?: string | null
-  contact_phone?: string | null
-  submitted_at: string
-  updated_at: string
-}
+/** Slim card props — only what the card needs */
+export type ReportCardData = {
+  id: string;
+  title: string;
+  description: string;
+  status: ReportStatus;
+  category: ReportCategory | null;
+  priority: ReportPriority | null;
+  image_urls: string[];
+  raw_image_urls: string[];
+  submitted_at: Date | string;
+};
 
-export interface ReportListResult {
-  total: number
-  page: number
-  page_size: number
-  results: Report[]
-}
+export type OrgCardData = {
+  id: string;
+  name: string;
+  branch_name: string | null;
+  org_type: OrgType;
+  verified: boolean;
+  phones: string[];
+  coverage_region: string | null;
+  description: string | null;
+  website: string | null;
+  address: string | null;
+  logo_url: string | null;
+  responsibilities: string[];
+};
 
-export interface ReportFilters {
-  title?: string
-  category?: ReportCategory
-  severity?: ReportSeverity
-  status?: ReportStatus
-  authority?: string
-  date_from?: string
-  date_to?: string
-  lattitude?: number
-  longitude?: number
-  radius_km?: number
-  page?: number
-  page_size?: number
-}
+export type ReportFilters = {
+  category?: ReportCategory;
+  status?: ReportStatus;
+  page?: number;
+  page_size?: number;
+};
 
-export interface ReportSubmitBody {
-  title: string
-  description: string
-  category: ReportCategory
-  severity: ReportSeverity
-  latitude?: number
-  longitude?: number
-  media_urls?: string[]
-  contact_email?: string
-  contact_phone?: string
-}
+export type ReportListResult = {
+  total: number;
+  page: number;
+  page_size: number;
+  results: ReportListItem[];
+};
 
-export interface OrgProfile {
-  id: string
-  email: string
-  name?: string | null
-  authority_type?: string | null
-  description?: string | null
-  phone?: string | null
-  address?: string | null
-  website?: string | null
-  verified?: boolean
-}
+export type ApiOk<T> = { status: true; result: T };
+export type ApiErr = { status: false; result: string };
+export type ApiResponse<T> = ApiOk<T> | ApiErr;
 
-export interface AuthState {
-  token: string | null
-  userId: string | null
-  email: string | null
-  profile: OrgProfile | null
-}
+export type ReportSubmitInput = {
+  title: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  token: string;
+  contact_email?: string;
+  contact_phone?: string;
+  raw_image_urls?: string[];
+  image_urls?: string[];
+};
 
-export type View = 'map' | 'reports' | 'submit' | 'my-reports' | 'authorities' | 'orgs'
+export type SubmitResult = {
+  id: string;
+  token: string;
+  status: ReportStatus;
+};
+
+/** AI analysis JSON we store in Report.analysis */
+export type AnalysisJson = {
+  summary?: string;
+  explanation?: string;
+  priority_score?: number;
+};
+
+export type AuthState = {
+  token: string | null;
+  userId: string | null;
+  email: string | null;
+};

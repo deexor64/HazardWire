@@ -1,74 +1,123 @@
-import type { Report, ReportFilters, ReportListResult } from './types'
+import type {
+  ApiResponse,
+  ReportFilters,
+  ReportListItem,
+  ReportListResult,
+  ReportSubmitInput,
+  SubmitResult,
+  OrgCardData,
+} from "./types";
 
-const BASE = '/api'
+const BASE = "/api";
 
-async function request<T>(path: string, options?: RequestInit, token?: string | null): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(BASE + path, { ...options, headers: { ...headers, ...options?.headers } })
-  const json = await res.json()
-  if (!json.status) throw new Error(typeof json.result === 'string' ? json.result : `HTTP ${res.status}`)
-  return json
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
+  const json = (await res.json()) as ApiResponse<T>;
+  if (!json.status) {
+    throw new Error(
+      typeof json.result === "string" ? json.result : "Request failed",
+    );
+  }
+  return json.result;
 }
 
-// ── Reports ──────────────────────────────────────────────────────────────────
-
-export async function getReports(filters: ReportFilters = {}): Promise<{ result: ReportListResult }> {
-  const params = new URLSearchParams()
-  Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') params.set(k, String(v)) })
-  const qs = params.toString()
-  return request(`/reports${qs ? '?' + qs : ''}`)
+export function getReports(filters: ReportFilters = {}) {
+  const params = new URLSearchParams();
+  if (filters.category) params.set("category", filters.category);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.page_size) params.set("page_size", String(filters.page_size));
+  const qs = params.toString();
+  return request<ReportListResult>(`/reports${qs ? `?${qs}` : ""}`);
 }
 
-export async function getReport(id: string): Promise<{ result: Report }> {
-  return request(`/reports/${id}`)
+export function getReportByToken(token: string) {
+  return request<ReportListItem>(
+    `/reports/by-token/${encodeURIComponent(token)}`,
+  );
 }
 
-export async function submitReport(body: Record<string, unknown>) {
-  return request('/reports', {
-    method: 'POST',
+export function submitReport(body: ReportSubmitInput) {
+  return request<SubmitResult>("/reports", {
+    method: "POST",
     body: JSON.stringify(body),
-  })
+  });
 }
 
-export async function getReportByToken(token: string) {
-  return request(`/reports/by-token/${token}`)
+export function getOrgs() {
+  return request<OrgCardData[]>("/orgs");
 }
 
+import type {
+  Organization,
+  Report,
+  ReportStatus,
+} from "@/generated/prisma/client";
 
-// ── Orgs ─────────────────────────────────────────────────────────────────────
-
-export async function orgSignup(name: string, email: string, password: string) {
-  return request('/orgs/signup', {
-    method: 'POST',
-    body: JSON.stringify({ name, email, password }),
-  })
+async function authRequest<T>(
+  path: string,
+  token: string,
+  options?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options?.headers,
+    },
+  });
+  const json = (await res.json()) as ApiResponse<T>;
+  if (!json.status) {
+    throw new Error(
+      typeof json.result === "string" ? json.result : "Request failed",
+    );
+  }
+  return json.result;
 }
 
-export async function orgLogin(email: string, password: string) {
-  return request('/orgs/signin', { method: 'POST', body: JSON.stringify({ email, password }) })
+export function getOrgProfile(token: string) {
+  return authRequest<Organization>("/orgs/profile", token);
 }
 
-export async function orgLogout(token: string) {
-  return request('/orgs/logout', { method: 'POST' }, token)
+export function updateOrgProfile(
+  token: string,
+  body: Partial<{
+    name: string;
+    branch_name: string | null;
+    description: string | null;
+    phones: string[];
+    address: string | null;
+    website: string | null;
+    coverage_region: string | null;
+    coverage_areas: string[];
+    responsibilities: string[];
+    keywords: string[];
+  }>,
+) {
+  return authRequest<Organization>("/orgs/profile", token, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
-export async function getPublicOrganizations() {
-  return request('/orgs/public')
+export function getOrgReports(token: string) {
+  return authRequest<Report[]>("/orgs/reports", token);
 }
 
-export async function getMe(token: string) {
-  return request('/orgs/profile', undefined, token)
-}
-
-export async function updateMe(token: string, updates: Record<string, string>) {
-  return request('/orgs/profile', { method: 'PUT', body: JSON.stringify(updates) }, token)
-}
-
-export async function deleteMe(token: string) {
-  return request('/orgs/profile', { method: 'DELETE' }, token)
-}
-
-export async function getReportUpdates(reportId: string) {
-  return request(`/reports/${reportId}/updates`)
+export function updateOrgReport(
+  token: string,
+  reportId: string,
+  body: { status?: ReportStatus; comment?: string },
+) {
+  return authRequest<Report>(`/orgs/reports/${reportId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
