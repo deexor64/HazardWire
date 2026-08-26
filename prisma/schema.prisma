@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReportCategory {
+  ROAD
+  WATER
+  IRRIGATION
+  GARBAGE
+  ENVIRONMENT
+  ACCIDENT
+  CONSTRUCTION
+  CRIME
+  GENERAL
+}
+
+enum ReportPriority {
+  UNKNOWN
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReportStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum OrgType {
+  GOVERNMENT
+  NON_GOVERNMENT
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  branch_name String?
+  org_type    OrgType  @default(NON_GOVERNMENT)
+  description String?
+  phones      String[] @default([])
+  address     String?
+  geo         Json?
+  website     String?
+  verified    Boolean  @default(false)
+  logo_url    String?
+  cover_url   String?
+
+  coverage_region  String?
+  coverage_areas   String[] @default([])
+  responsibilities String[] @default([])
+  keywords         String[] @default([])
+  reference_links  String[] @default([])
+  compliance       String[] @default([])
+  laws             String[] @default([])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  reports Report[] @relation("OrgReports")
+
+  @@map("organizations")
+}
+
+model Report {
+  id               String         @id @default(uuid())
+  public_token_hash String        @unique
+  title            String
+  description      String
+  latitude         Float
+  longitude        Float
+  contact_email    String?
+  contact_phone    String?
+
+  status      ReportStatus    @default(PENDING)
+  category    ReportCategory?
+  priority    ReportPriority?
+  geo         Json?
+  analysis    Json?
+  raw_image_urls String[]     @default([])
+  image_urls     String[]     @default([])
+  comments       String[]     @default([])
+
+  org_id String?
+  organization Organization? @relation("OrgReports", fields: [org_id], references: [id], onDelete: SetNull)
+
+  job Job?
+
+  submitted_at DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  @@map("reports")
+}
+
+model Job {
+  id         String    @id @default(uuid())
+  report_id  String    @unique
+  status     String    @default("pending")
+  attempts   Int       @default(0)
+  locked_at  DateTime?
+  created_at DateTime  @default(now())
+
+  report Report @relation(fields: [report_id], references: [id], onDelete: Cascade)
+
+  @@map("jobs")
+}
