@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "deexor64",email = "191124667+deexor64@users.noreply.github.com"},
 ]
-dependencies = ["fastapi[standard]>=0.141.1", "passlib[bcrypt]>=1.7.4", "python-jose[cryptography]>=3.5.0", "pydantic-settings>=2.15.0", "supabase>=2.31.0", "python-dotenv>=1.2.3", "google-genai>=2.20.0"]
+dependencies = ["fastapi[standard]>=0.141.1", "passlib[bcrypt]>=1.7.4", "python-jose[cryptography]>=3.5.0", "pydantic-settings>=2.15.0", "supabase>=2.31.0", "python-dotenv>=1.2.3", "google-genai>=2.20.0", "numpy>=2.5.2", "opencv-python-headless<5,>=4.10"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}

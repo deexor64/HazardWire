@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from .ai import analyze_report
 from .core.client import supabase
+from .images import process_report_images
 
 
 def analyze_report_with_ai(title: str, description: str) -> dict:
@@ -137,12 +138,25 @@ def process_job(job: dict):
             raise Exception("Report not found")
 
         # 2. Analyze (text + images)
-        image_urls = report.get("media_urls") or report.get("raw_media_urls") or []
+        raw_urls = report.get("raw_media_urls") or report.get("media_urls") or []
+
+        # 2a. Privacy: blur faces → processed_* urls
+        privacy_info = {"blurred": False, "faces": 0, "plates": 0}
+        processed_urls = raw_urls
+        if raw_urls:
+            print("  Processing images (privacy blur)...")
+            img_result = process_report_images(raw_urls)
+            processed_urls = img_result["processed_urls"]
+            privacy_info = img_result["privacy"]
+            print(f"  Privacy: faces={privacy_info['faces']}")
+
+        # 2b. Analyze (prefer processed images)
         analysis = analyze_report(
             title=report.get("title") or "",
             description=report.get("description") or "",
-            image_urls=image_urls,
+            image_urls=processed_urls,
         )
+        analysis["privacy"] = privacy_info
 
         # 3. Find organization (can be None — that's OK)
         authority_id = find_organization(analysis["authority_type"])
@@ -153,6 +167,8 @@ def process_job(job: dict):
             "severity": analysis["severity"],
             "description": analysis["cleaned_description"],
             "ai_analysis": analysis,
+            "media_urls": processed_urls,  # public-safe images
+            "raw_media_urls": raw_urls,  # keep originals
             "status": "assigned" if authority_id else "pending",
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
