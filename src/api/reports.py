@@ -4,16 +4,15 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 
 from core.client import supabase
-from db import reports
-
-from .types import ReportFilter, ReportSubmit
+from core.types import ReportFilter, ReportSubmit
+from users import reports as user_reports
 
 router = APIRouter(prefix="/reports")
 
 
 @router.post("")
 async def create_report(form: ReportSubmit):
-    result = reports.create_report(
+    result = user_reports.create_report(
         title=form.title,
         description=form.description,
         latitude=form.latitude,
@@ -56,7 +55,7 @@ async def upload_image(file: UploadFile = File(...)):
 
 @router.get("")
 async def get_reports(form: ReportFilter = Depends()):
-    result = reports.get_reports(
+    result = user_reports.get_reports(
         title=form.title,
         category=form.category.value if form.category else None,
         severity=form.severity.value if form.severity else None,
@@ -70,17 +69,17 @@ async def get_reports(form: ReportFilter = Depends()):
 
 @router.get("/{report_id}")
 async def get_report(report_id: str):
-    result = reports.get_report_by_id(report_id)
+    result = user_reports.get_report_by_id(report_id)
     return JSONResponse({"status": result.status, "result": result.result})
 
 
 @router.get("/by-token/{token}")
 async def get_report_by_token(token: str):
-    result = reports.get_report_by_token(token)
+    result = user_reports.get_report_by_token(token)
     return JSONResponse({"status": result.status, "result": result.result})
 
 
 @router.get("/{report_id}/updates")
 async def get_report_updates(report_id: str):
-    result = reports.get_report_updates(report_id)
+    result = user_reports.get_report_updates(report_id)
     return JSONResponse({"status": result.status, "result": result.result})

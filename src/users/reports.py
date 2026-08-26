@@ -1,8 +1,7 @@
 from hashlib import sha256
 
 from core.client import supabase
-
-from .types import DbResult
+from core.types import DbResult
 
 
 def create_report(

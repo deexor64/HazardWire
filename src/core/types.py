@@ -1,7 +1,14 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
+
+
+class DbResult:
+    def __init__(self, status: bool, result: Any):
+        self.status: bool = status
+        self.result: Any = result
 
 
 class ReportCategory(str, Enum):

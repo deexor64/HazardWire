@@ -38,16 +38,16 @@ def get_current_user(request: Request) -> User:
     token = auth_header.removeprefix("Bearer ").strip()
 
     try:
-        response = supabase.auth.get_user(token)
+        res = supabase.auth.get_user(token)
 
-        if not response or not response.user:
+        if not res or not res.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        return response.user
+        return res.user
 
     except Exception as _:
         raise HTTPException(
@@ -55,7 +55,3 @@ def get_current_user(request: Request) -> User:
             detail="Invalid or expired token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-def is_authenticated(user: User) -> bool:
-    return user is not None

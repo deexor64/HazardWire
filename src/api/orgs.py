@@ -1,25 +1,26 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from supabase_auth import User
+from supabase_auth import Session, User
 
-from api.types import OrgProfileUpdate, OrgSignin, OrgSignup
 from core.client import supabase
 from core.dependencies import get_current_user
-from db import orgs
+from core.types import OrgProfileUpdate, OrgSignin, OrgSignup
+from orgs import auth as orgs_auth
+from orgs import profile as orgs_profile
 
 router = APIRouter(prefix="/orgs")
 
 
 @router.post("/signup")
 async def signup(form: OrgSignup):
-    auth_res = orgs.signup(form.email, form.password)
-    if not auth_res.status:
-        return JSONResponse({"status": False, "result": auth_res.result})
+    res = orgs_auth.signup(form.email, form.password)
+    if not res.status:
+        return JSONResponse({"status": False, "result": res.result})
 
-    user = auth_res.result.user
-    session = auth_res.result.session
+    user: User = res.result.user
+    session: Session = res.result.session
 
-    profile_res = orgs.create_profile(str(user.id), form.name, form.email)
+    profile_res = orgs_profile.create_profile(str(user.id), form.name, form.email)
     if not profile_res.status:
         return JSONResponse({"status": False, "result": profile_res.result})
 
@@ -37,7 +38,7 @@ async def signup(form: OrgSignup):
 
 @router.post("/signin")
 async def signin(form: OrgSignin):
-    res = orgs.signin(form.email, form.password)
+    res = orgs_auth.signin(form.email, form.password)
     if not res.status:
         return JSONResponse({"status": False, "result": res.result})
 
@@ -58,13 +59,13 @@ async def signin(form: OrgSignin):
 
 @router.post("/logout")
 async def logout(user: User = Depends(get_current_user)):
-    res = orgs.signout()
+    res = orgs_auth.signout()
     return JSONResponse({"status": res.status, "result": res.result})
 
 
 @router.get("/profile")
 async def get_profile(user: User = Depends(get_current_user)):
-    res = orgs.get_profile(str(user.id))
+    res = orgs_profile.get_profile(str(user.id))
     return JSONResponse({"status": res.status, "result": res.result})
 
 
@@ -96,13 +97,13 @@ async def update_profile(
         "address": form.address,
         "website": form.website,
     }
-    res = orgs.update_profile(str(user.id), data)
+    res = orgs_profile.update_profile(str(user.id), data)
     return JSONResponse({"status": res.status, "result": res.result})
 
 
 @router.delete("/profile")
 async def delete_profile(user: User = Depends(get_current_user)):
-    res = orgs.delete_profile(str(user.id))
+    res = orgs_profile.delete_profile(str(user.id))
     return JSONResponse({"status": res.status, "result": res.result})
 
 

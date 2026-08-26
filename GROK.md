@@ -46,7 +46,7 @@ AI-powered civic hazard reporting for Sri Lanka.
 15. [x] Multimodal (text + images) on Gemini
 16. [x] Keyword fallback
 17. [x] Worker assigns `authority_id` from authority_type
-18. [ ] Image privacy pipeline (`new_*` → blur faces/plates → `processed_*`)
+18. [x] Image privacy pipeline (`new_*` → blur faces/plates → `processed_*`)
 19. [ ] Geo-aware routing (Nominatim / road context)
 20. [ ] Duplicate / related report detection
 21. [ ] Org inbox sort by priority_score
