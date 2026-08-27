@@ -19,12 +19,28 @@ import type {
 type Mode = "login" | "signup";
 type Tab = "reports" | "profile";
 
+type OrgGeo = {
+  lat?: number
+  lng?: number
+  display_name?: string
+  city?: string
+  state?: string
+}
+
+function readGeo(profile: Organization): OrgGeo {
+  const g = profile.geo
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return {}
+  return g as OrgGeo
+}
+
 export default function OrgsClient() {
   const { auth, setAuth } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [latText, setLatText] = useState('')
+  const [lngText, setLngText] = useState('')
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -45,6 +61,9 @@ export default function OrgsClient() {
       ]);
       setProfile(p);
       setReports(r);
+      const g = readGeo(p)
+      setLatText(g.lat != null ? String(g.lat) : '')
+      setLngText(g.lng != null ? String(g.lng) : '')
     } catch (e) {
       setDashError(e instanceof Error ? e.message : "Failed to load dashboard");
     } finally {
@@ -130,27 +149,45 @@ export default function OrgsClient() {
   }
 
   async function handleSaveProfile() {
-    if (!auth.token || !profile) return;
-    setSaving(true);
-    setDashError("");
+    if (!auth.token || !profile) return
+    setSaving(true)
+    setDashError('')
     try {
+      const lat = latText.trim() === '' ? null : Number(latText)
+      const lng = lngText.trim() === '' ? null : Number(lngText)
+
+      if (
+        (latText.trim() !== '' && !Number.isFinite(lat)) ||
+        (lngText.trim() !== '' && !Number.isFinite(lng))
+      ) {
+        setDashError('Latitude and longitude must be valid numbers.')
+        return
+      }
+
       const updated = await updateOrgProfile(auth.token, {
         name: profile.name,
         branch_name: profile.branch_name,
         description: profile.description,
-        phones: profile.phones,
+        phones: profile.phones.map((s) => s.trim()).filter(Boolean),
         address: profile.address,
         website: profile.website,
         coverage_region: profile.coverage_region,
-        coverage_areas: profile.coverage_areas,
-        responsibilities: profile.responsibilities,
-        keywords: profile.keywords,
-      });
-      setProfile(updated);
+        coverage_areas: profile.coverage_areas.map((s) => s.trim()).filter(Boolean),
+        responsibilities: profile.responsibilities.map((s) => s.trim()).filter(Boolean),
+        keywords: profile.keywords.map((s) => s.trim()).filter(Boolean),
+        geo:
+          lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
+            ? { lat, lng }
+            : null,
+      })
+      setProfile(updated)
+      const g = readGeo(updated)
+      setLatText(g.lat != null ? String(g.lat) : '')
+      setLngText(g.lng != null ? String(g.lng) : '')
     } catch (e) {
-      setDashError(e instanceof Error ? e.message : "Save failed");
+      setDashError(e instanceof Error ? e.message : 'Save failed')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -293,14 +330,11 @@ export default function OrgsClient() {
             />
             <Field
               label="Phones (comma-separated)"
-              value={profile.phones.join(", ")}
+              value={profile.phones.join(', ')}
               onChange={(v) =>
                 setProfile({
                   ...profile,
-                  phones: v
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
+                  phones: v.split(',').map((s) => s.trimStart()),
                 })
               }
             />
@@ -321,29 +355,40 @@ export default function OrgsClient() {
                 setProfile({ ...profile, coverage_region: v || null })
               }
             />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="HQ Latitude"
+                value={latText}
+                onChange={setLatText}
+              />
+              <Field
+                label="HQ Longitude"
+                value={lngText}
+                onChange={setLngText}
+              />
+            </div>
+            <p className="text-xs text-slate-500 -mt-2">
+              Used to match nearby hazard reports. Example Colombo: 6.9271, 79.8612
+            </p>
+
             <Field
               label="Responsibilities (comma-separated)"
-              value={profile.responsibilities.join(", ")}
+              value={profile.responsibilities.join(', ')}
               onChange={(v) =>
                 setProfile({
                   ...profile,
-                  responsibilities: v
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
+                  responsibilities: v.split(',').map((s) => s.trimStart()),
                 })
               }
             />
             <Field
               label="Keywords (comma-separated)"
-              value={profile.keywords.join(", ")}
+              value={profile.keywords.join(', ')}
               onChange={(v) =>
                 setProfile({
                   ...profile,
-                  keywords: v
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
+                  keywords: v.split(',').map((s) => s.trimStart()),
                 })
               }
             />

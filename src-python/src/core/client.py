@@ -13,6 +13,10 @@ from supabase import Client, create_client
 _ = load_dotenv()
 
 url: str = os.environ.get("SUPABASE_URL", "")
-key: str = os.environ.get("SUPABASE_KEY", "")
+key: str = (
+    os.environ.get("SUPABASE_SERVICE_ROLE_KEY", None)
+    or os.environ.get("SUPABASE_KEY", None)
+    or ""
+)
 
 supabase: Client = create_client(url, key)

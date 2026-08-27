@@ -1,48 +1,51 @@
-import os
-import urllib.request
 import uuid
-from io import BytesIO
 
 import cv2
 import numpy as np
 
 from .core.client import supabase
 
-BUCKET = "hazard-images"
+BUCKET_RAW = "images_raw"
+BUCKET_PUBLIC = "images"
 
 
-def _download_image(url: str) -> np.ndarray | None:
+def _download_from_raw(path_or_url: str) -> np.ndarray | None:
+    """Load bytes from private bucket path, or HTTP URL fallback."""
     try:
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            data = resp.read()
+        path = path_or_url
+        if "/images_raw/" in path_or_url:
+            path = path_or_url.split("/images_raw/")[-1].split("?")[0]
+
+        # Prefer storage download (works for private bucket with service key)
+        try:
+            data = supabase.storage.from_(BUCKET_RAW).download(path)
+        except Exception:
+            import urllib.request
+
+            with urllib.request.urlopen(path_or_url, timeout=30) as resp:
+                data = resp.read()
+
         arr = np.frombuffer(data, dtype=np.uint8)
-        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-        return img
+        return cv2.imdecode(arr, cv2.IMREAD_COLOR)
     except Exception as e:
         print(f"  image download failed: {e}")
         return None
 
 
 def _blur_faces(img: np.ndarray) -> tuple[np.ndarray, int]:
-    """Blur faces. Returns (image, face_count). No-op if cascade unavailable."""
     if not hasattr(cv2, "CascadeClassifier"):
-        print(
-            "  CascadeClassifier not available in this OpenCV build — skipping face blur"
-        )
+        print("  CascadeClassifier unavailable — skip face blur")
         return img, 0
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     face_cascade = cv2.CascadeClassifier(cascade_path)
-
     if face_cascade.empty():
-        print("  Failed to load face cascade — skipping face blur")
         return img, 0
 
     faces = face_cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
     )
-
     count = 0
     for x, y, w, h in faces:
         roi = img[y : y + h, x : x + w]
@@ -57,51 +60,44 @@ def _blur_faces(img: np.ndarray) -> tuple[np.ndarray, int]:
 def _encode_jpg(img: np.ndarray) -> bytes:
     ok, buf = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     if not ok:
-        raise ValueError("Failed to encode image")
+        raise ValueError("encode failed")
     return buf.tobytes()
 
 
-def process_report_images(raw_urls: list[str]) -> dict:
+def process_report_images(raw_paths: list[str]) -> dict:
     """
-    Download raw images, blur faces, upload as processed_<uuid>.jpg
-    Returns:
-      {
-        "processed_urls": [...],
-        "privacy": {"blurred": bool, "faces": int, "plates": 0}
-      }
+    raw_paths: paths in images_raw (or URLs).
+    Writes blurred images to public bucket `images` as {uuid}.jpg
     """
-    processed_urls = []
+    processed_urls: list[str] = []
     total_faces = 0
 
-    for url in raw_urls or []:
-        img = _download_image(url)
+    for ref in raw_paths or []:
+        img = _download_from_raw(ref)
         if img is None:
-            # keep original if we can't process
-            processed_urls.append(url)
             continue
 
         img, faces = _blur_faces(img)
         total_faces += faces
 
         try:
-            filename = f"processed_{uuid.uuid4()}.jpg"
+            filename = f"{uuid.uuid4()}.jpg"
             content = _encode_jpg(img)
-            supabase.storage.from_(BUCKET).upload(
+            supabase.storage.from_(BUCKET_PUBLIC).upload(
                 path=filename,
                 file=content,
                 file_options={"content-type": "image/jpeg", "upsert": "true"},
             )
-            public_url = supabase.storage.from_(BUCKET).get_public_url(filename)
+            public_url = supabase.storage.from_(BUCKET_PUBLIC).get_public_url(filename)
             processed_urls.append(public_url)
         except Exception as e:
-            print(f"  processed upload failed: {e}")
-            processed_urls.append(url)
+            print(f"  public upload failed: {e}")
 
     return {
         "processed_urls": processed_urls,
         "privacy": {
             "blurred": total_faces > 0,
             "faces": total_faces,
-            "plates": 0,  # best-effort later
+            "plates": 0,
         },
     }

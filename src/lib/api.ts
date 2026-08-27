@@ -89,22 +89,29 @@ export function getOrgProfile(token: string) {
 export function updateOrgProfile(
   token: string,
   body: Partial<{
-    name: string;
-    branch_name: string | null;
-    description: string | null;
-    phones: string[];
-    address: string | null;
-    website: string | null;
-    coverage_region: string | null;
-    coverage_areas: string[];
-    responsibilities: string[];
-    keywords: string[];
+    name: string
+    branch_name: string | null
+    description: string | null
+    phones: string[]
+    address: string | null
+    website: string | null
+    coverage_region: string | null
+    coverage_areas: string[]
+    responsibilities: string[]
+    keywords: string[]
+    geo: {
+      lat: number
+      lng: number
+      display_name?: string
+      city?: string
+      state?: string
+    } | null
   }>,
 ) {
-  return authRequest<Organization>("/orgs/profile", token, {
-    method: "PUT",
+  return authRequest<Organization>('/orgs/profile', token, {
+    method: 'PUT',
     body: JSON.stringify(body),
-  });
+  })
 }
 
 export function getOrgReports(token: string) {
