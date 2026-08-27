@@ -5,16 +5,17 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getReports } from '@/lib/api'
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#dc2626',
-  high: '#ea580c',
-  medium: '#ca8a04',
-  low: '#16a34a',
-  unknown: '#64748b',
+const PRIORITY_COLORS: Record<string, string> = {
+  CRITICAL: '#dc2626',
+  HIGH: '#ea580c',
+  MEDIUM: '#ca8a04',
+  LOW: '#16a34a',
+  UNKNOWN: '#64748b',
 }
 
-function createMarkerSvg(severity: string | null) {
-  const color = SEVERITY_COLORS[severity || 'unknown'] || SEVERITY_COLORS.unknown
+function createMarkerSvg(priority: string | null | undefined) {
+  const key = (priority || 'UNKNOWN').toUpperCase()
+  const color = PRIORITY_COLORS[key] || PRIORITY_COLORS.UNKNOWN
   return `
     <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z" fill="${color}"/>
@@ -58,8 +59,8 @@ export default function MapViewInner() {
   useEffect(() => {
     setLoading(true)
     getReports({ page_size: 100 })
-      .then((res: any) => {
-        setReports(res.result?.results || [])
+      .then((data) => {
+        setReports(data.results ?? [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -75,10 +76,10 @@ export default function MapViewInner() {
     markersRef.current = []
 
     reports.forEach((report) => {
-      if (!report.latitude || !report.longitude) return
+      if (report.latitude == null || report.longitude == null) return
 
       const icon = L.divIcon({
-        html: createMarkerSvg(report.severity),
+        html: createMarkerSvg(report.priority),
         className: '',
         iconSize: [28, 36],
         iconAnchor: [14, 36],
@@ -107,7 +108,7 @@ export default function MapViewInner() {
 
       {/* Selected report card */}
       {selected && (
-        <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-center">
+        <div className="absolute bottom-4 left-4 right-4 z-1000 flex justify-center">
           <div className="bg-white border border-slate-200 rounded-xl shadow-lg max-w-md w-full p-4">
             <div className="flex items-start justify-between gap-3 mb-2">
               <h3 className="font-semibold text-slate-800 leading-snug">
@@ -131,8 +132,8 @@ export default function MapViewInner() {
                 {selected.category || 'Uncategorized'}
               </span>
               <span className="text-slate-300">·</span>
-              <span className="text-slate-400 capitalize">
-                {selected.severity || 'Unknown'} severity
+              <span className="text-slate-400">
+                {selected.priority || 'UNKNOWN'} priority
               </span>
             </div>
           </div>
@@ -143,7 +144,7 @@ export default function MapViewInner() {
       <div className="absolute z-1000 bottom-4 left-4 bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-sm hidden sm:block">
         <p className="text-[10px] font-medium text-slate-500 mb-1.5">Severity</p>
         <div className="flex flex-col gap-1">
-          {Object.entries(SEVERITY_COLORS).map(([key, color]) => (
+          {Object.entries(PRIORITY_COLORS).map(([key, color]) => (
             <div key={key} className="flex items-center gap-1.5">
               <div
                 className="w-2.5 h-2.5 rounded-full"
@@ -168,7 +169,8 @@ function StatusBadge({ status }: { status: string }) {
     closed: 'bg-slate-100 text-slate-600 border-slate-200',
   }
 
-  const style = styles[status] || styles.pending
+  const key = (status || 'PENDING').toLowerCase()
+  const style = styles[key] || styles.pending
 
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border capitalize ${style}`}>
