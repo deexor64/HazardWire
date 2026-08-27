@@ -140,7 +140,7 @@ export default function MapViewInner() {
       )}
 
       {/* Simple legend */}
-      <div className="absolute bottom-4 left-4 z-10 bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-sm hidden sm:block">
+      <div className="absolute z-1000 bottom-4 left-4 bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-sm hidden sm:block">
         <p className="text-[10px] font-medium text-slate-500 mb-1.5">Severity</p>
         <div className="flex flex-col gap-1">
           {Object.entries(SEVERITY_COLORS).map(([key, color]) => (

@@ -1,36 +1,55 @@
-import type { ReportSeverity, ReportStatus, ReportCategory } from './types'
+import { ReportCategory, ReportPriority, ReportStatus } from "@/generated/prisma/enums"
 
-export const SEVERITY_COLOR: Record<ReportSeverity, string> = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#22c55e',
+export const SEVERITY_COLOR: Record<ReportPriority, string> = {
+  CRITICAL: '#ef4444',
+  HIGH: '#f97316',
+  MEDIUM: '#eab308',
+  LOW: '#22c55e',
+  UNKNOWN: '#6b7280',
 }
 
-export const SEVERITY_BG: Record<ReportSeverity, string> = {
-  critical: 'bg-red-500/15 text-red-400 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  medium: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  low: 'bg-green-500/15 text-green-400 border-green-500/30',
+export const SEVERITY_BG: Record<ReportPriority, string> = {
+  CRITICAL: 'bg-red-500/15 text-red-400 border-red-500/30',
+  HIGH: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  MEDIUM: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+  LOW: 'bg-green-500/15 text-green-400 border-green-500/30',
+  UNKNOWN: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
 }
 
 export const STATUS_BG: Record<ReportStatus, string> = {
-  pending: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-  assigned: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  in_review: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  resolved: 'bg-green-500/15 text-green-400 border-green-500/30',
+  PENDING: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+  ASSIGNED: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  IN_PROGRESS: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  RESOLVED: 'bg-green-500/15 text-green-400 border-green-500/30',
+  CLOSED: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
 }
 
 export const CATEGORY_ICON: Record<ReportCategory, string> = {
-  road: '🛣️', drainage: '🌊', water: '💧', electricity: '⚡',
-  garbage: '🗑️', environment: '🌿', animals: '🐾',
-  accident: '💥', crime: '🚨', other: '📌',
+  ROAD: '🛣️',
+  WATER: '💧',
+  IRRIGATION: '🌾',
+  CONSTRUCTION: '🏗️',
+  // ELECTRICITY: '⚡',
+  GARBAGE: '🗑️',
+  ENVIRONMENT: '🌿',
+  // ANIMALS: '🐾',
+  ACCIDENT: '💥',
+  CRIME: '🚨',
+  GENERAL: '📌',
 }
 
 export const CATEGORY_LABEL: Record<ReportCategory, string> = {
-  road: 'Road', drainage: 'Drainage', water: 'Water', electricity: 'Electricity',
-  garbage: 'Garbage', environment: 'Environment', animals: 'Animals',
-  accident: 'Accident', crime: 'Crime', other: 'Other',
+  ROAD: 'Road',
+  WATER: 'Water',
+  IRRIGATION: 'Irrigation',
+  CONSTRUCTION: 'Construction',
+  // ELECTRICITY: 'Electricity',
+  GARBAGE: 'Garbage',
+  ENVIRONMENT: 'Environment',
+  // ANIMALS: 'Animals',
+  ACCIDENT: 'Accident',
+  CRIME: 'Crime',
+  GENERAL: 'General',
 }
 
 export function formatDate(iso: string) {
@@ -50,10 +69,10 @@ export function relativeTime(iso: string) {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export function createMarkerIcon(severity: ReportSeverity) {
-  const color = SEVERITY_COLOR[severity]
-  const pulse = severity === 'critical'
-  const size = severity === 'critical' ? 14 : 11
+export function createMarkerIcon(priority: ReportPriority) {
+  const color = SEVERITY_COLOR[priority]
+  const pulse = priority === 'CRITICAL'
+  const size = priority === 'CRITICAL' ? 14 : 11
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
       ${pulse ? `<circle cx="16" cy="16" r="16" fill="${color}" opacity="0.2">

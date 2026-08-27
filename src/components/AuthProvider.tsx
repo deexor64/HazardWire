@@ -9,7 +9,6 @@ const DEFAULT_AUTH: AuthState = {
   token: null,
   userId: null,
   email: null,
-  profile: null,
 }
 
 interface AuthContextValue {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
+import type L from "leaflet"; // Changed to type-only import
 import "leaflet/dist/leaflet.css";
 import { submitReport } from "@/lib/api";
 
@@ -28,37 +28,49 @@ export default function SubmitForm() {
     setToken(generateToken());
   }, []);
 
+  // Map initialization: Dynamically imported inside useEffect
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current).setView([7.8731, 80.7718], 8);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
+    let isMounted = true;
 
-    map.on("click", (e) => {
-      const lat = parseFloat(e.latlng.lat.toFixed(6));
-      const lng = parseFloat(e.latlng.lng.toFixed(6));
-      setLatitude(lat);
-      setLongitude(lng);
+    import("leaflet").then((leafletModule) => {
+      const L = leafletModule.default;
+      if (!isMounted || !mapContainerRef.current || mapRef.current) return;
 
-      if (markerRef.current) {
-        markerRef.current.setLatLng(e.latlng);
-      } else {
-        markerRef.current = L.circleMarker(e.latlng, {
-          radius: 8,
-          color: "#ea580c",
-          fillColor: "#ea580c",
-          fillOpacity: 0.85,
-        }).addTo(map);
-      }
+      const map = L.map(mapContainerRef.current).setView([7.8731, 80.7718], 8);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
+      }).addTo(map);
+
+      map.on("click", (e) => {
+        const lat = parseFloat(e.latlng.lat.toFixed(6));
+        const lng = parseFloat(e.latlng.lng.toFixed(6));
+        setLatitude(lat);
+        setLongitude(lng);
+
+        if (markerRef.current) {
+          markerRef.current.setLatLng(e.latlng);
+        } else {
+          markerRef.current = L.circleMarker(e.latlng, {
+            radius: 8,
+            color: "#ea580c",
+            fillColor: "#ea580c",
+            fillOpacity: 0.85,
+          }).addTo(map);
+        }
+      });
+
+      mapRef.current = map;
     });
 
-    mapRef.current = map;
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markerRef.current = null;
+      isMounted = false;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
     };
   }, []);
 
