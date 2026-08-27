@@ -8,6 +8,7 @@ import InfoItem from "@/components/InfoItem";
 import type { ReportCategory, ReportStatus } from "@/generated/prisma/client";
 import type { AnalysisJson, ReportListItem } from "@/lib/types";
 import Image from "next/image";
+import { publicImageUrls } from "@/lib/utils";
 
 const CATEGORIES: ReportCategory[] = [
   "ROAD",
@@ -125,9 +126,7 @@ function ReportDetail({
   report: ReportListItem;
   onBack: () => void;
 }) {
-  const images = report.image_urls.length
-    ? report.image_urls
-    : report.raw_image_urls;
+  const images = publicImageUrls(report.image_urls, report.raw_image_urls)
   const analysis = report.analysis as AnalysisJson | null;
 
   return (
@@ -152,6 +151,8 @@ function ReportDetail({
             <div className="flex gap-2 overflow-x-auto">
               {images.map((url) => (
                 <Image
+                  width={200}
+                  height={200}
                   key={url}
                   src={url}
                   alt=""
@@ -173,6 +174,17 @@ function ReportDetail({
               value={`${report.latitude}, ${report.longitude}`}
             />
           </div>
+
+          <InfoItem
+            label="Organization"
+            value={
+              report.organization
+                ? report.organization.branch_name
+                  ? `${report.organization.name} – ${report.organization.branch_name}`
+                  : report.organization.name
+                : 'Unassigned'
+            }
+          />
 
           {analysis?.summary && (
             <div className="pt-3 border-t border-slate-100 space-y-1">

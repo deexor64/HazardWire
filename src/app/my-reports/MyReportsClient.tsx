@@ -97,6 +97,16 @@ export default function MyReportClient() {
                 <p className="text-sm text-slate-600">{analysis.summary}</p>
               </div>
             )}
+            {report.comments.length > 0 && (
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-xs font-medium text-slate-500 mb-2">Updates</p>
+                <ul className="space-y-2">
+                  {report.comments.toReversed().map((c, i) => (
+                    <li key={i} className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}

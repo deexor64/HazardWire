@@ -85,3 +85,13 @@ export function createMarkerIcon(priority: ReportPriority) {
     </svg>`
   return svg
 }
+
+export function publicImageUrls(
+  image_urls: string[] | null | undefined,
+  raw_image_urls?: string[] | null
+): string[] {
+  const preferred = image_urls?.length ? image_urls : raw_image_urls ?? []
+  return preferred.filter(
+    (u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))
+  )
+}

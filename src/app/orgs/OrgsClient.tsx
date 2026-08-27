@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import {
   getOrgProfile,
   getOrgReports,
+  getOrgs,
   updateOrgProfile,
   updateOrgReport,
 } from "@/lib/api";
@@ -50,6 +51,7 @@ export default function OrgsClient() {
   const [dashLoading, setDashLoading] = useState(false);
   const [dashError, setDashError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [allOrgs, setAllOrgs] = useState<OrgCardData[]>([])
 
   const loadDashboard = useCallback(async (token: string) => {
     setDashLoading(true);
@@ -61,6 +63,8 @@ export default function OrgsClient() {
       ]);
       setProfile(p);
       setReports(r);
+      const orgs = await getOrgs()
+      setAllOrgs(orgs.filter((o) => o.id !== auth.userId))
       const g = readGeo(p)
       setLatText(g.lat != null ? String(g.lat) : '')
       setLngText(g.lng != null ? String(g.lng) : '')
@@ -302,6 +306,87 @@ export default function OrgsClient() {
                       </button>
                     ))}
                   </div>
+
+                  <OrgCommentBox
+                    reportId={r.id}
+                    token={auth.token!}
+                    onDone={(updated) =>
+                      setReports((prev) => prev.map((x) => (x.id === r.id ? updated : x)))
+                    }
+                  />
+                  {/* Comments */}
+                  {r.comments?.length > 0 && (
+                    <ul className="space-y-1 pt-2 border-t border-slate-100">
+                      {r.comments.map((c, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2"
+                        >
+                          <span className="flex-1">{c}</span>
+                          <button
+                            type="button"
+                            title="Delete comment"
+                            className="text-slate-400 hover:text-red-600 shrink-0 text-sm"
+                            onClick={async () => {
+                              if (!auth.token) return
+                              try {
+                                const updated = await updateOrgReport(
+                                  auth.token,
+                                  r.id,
+                                  { delete_comment_index: i }
+                                )
+                                setReports((prev) =>
+                                  prev.map((x) => (x.id === r.id ? updated : x))
+                                )
+                              } catch (e) {
+                                setDashError(
+                                  e instanceof Error ? e.message : 'Delete failed'
+                                )
+                              }
+                            }}
+                          >
+                            🗑
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Reassign */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                    <label className="text-xs text-slate-500">Reassign to</label>
+                    <select
+                      className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+                      defaultValue=""
+                      onChange={async (e) => {
+                        const nextOrg = e.target.value
+                        if (!nextOrg || !auth.token) return
+                        try {
+                          await updateOrgReport(auth.token, r.id, {
+                            org_id: nextOrg,
+                          })
+                          // Leave this org's inbox
+                          setReports((prev) => prev.filter((x) => x.id !== r.id))
+                        } catch (err) {
+                          setDashError(
+                            err instanceof Error ? err.message : 'Reassign failed'
+                          )
+                        } finally {
+                          e.target.value = ''
+                        }
+                      }}
+                    >
+                      <option value="" disabled>
+                        Choose organisation…
+                      </option>
+                      {allOrgs.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                          {o.branch_name ? ` – ${o.branch_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ))
             )}
@@ -531,4 +616,48 @@ function Field({
       )}
     </div>
   );
+}
+
+function OrgCommentBox({
+  reportId,
+  token,
+  onDone,
+}: {
+  reportId: string
+  token: string
+  onDone: (r: Report) => void
+}) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function send() {
+    if (!text.trim()) return
+    setBusy(true)
+    try {
+      const updated = await updateOrgReport(token, reportId, { comment: text.trim() })
+      setText('')
+      onDone(updated)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex gap-2 pt-1">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        className="input-base flex-1 text-sm"
+        placeholder="Add a public update…"
+      />
+      <button
+        type="button"
+        onClick={send}
+        disabled={busy}
+        className="px-3 py-2 text-sm rounded-lg bg-slate-800 text-white disabled:opacity-50"
+      >
+        Post
+      </button>
+    </div>
+  )
 }

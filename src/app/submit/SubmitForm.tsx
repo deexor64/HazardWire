@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type L from "leaflet"; // Changed to type-only import
 import "leaflet/dist/leaflet.css";
-import { submitReport } from "@/lib/api";
+import { submitReport, uploadRawImage } from "@/lib/api";
 
 function generateToken() {
   return crypto.randomUUID() + "-" + Math.random().toString(36).slice(2, 10);
@@ -16,6 +16,7 @@ export default function SubmitForm() {
   const [description, setDescription] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null)
   const [submitting, setSubmitting] = useState(false);
   const [successToken, setSuccessToken] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -92,13 +93,23 @@ export default function SubmitForm() {
     setError("");
 
     try {
+      const raw_image_urls: string[] = []
+
+      if (files && files.length > 0) {
+        for (const file of Array.from(files).slice(0, 3)) {
+          const path = await uploadRawImage(file)
+          raw_image_urls.push(path)
+        }
+      }
+
       const result = await submitReport({
         title: title.trim(),
         description: description.trim(),
         latitude,
         longitude,
         token,
-      });
+        raw_image_urls,
+      })
       setSuccessToken(result.token);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
@@ -240,6 +251,19 @@ export default function SubmitForm() {
               Selected: {latitude}, {longitude}
             </p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Photos (optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => setFiles(e.target.files)}
+            className="text-sm"
+          />
         </div>
 
         <button

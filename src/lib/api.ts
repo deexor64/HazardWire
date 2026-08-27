@@ -121,10 +121,24 @@ export function getOrgReports(token: string) {
 export function updateOrgReport(
   token: string,
   reportId: string,
-  body: { status?: ReportStatus; comment?: string },
+  body: {
+    status?: ReportStatus
+    comment?: string
+    delete_comment_index?: number
+    org_id?: string
+  }
 ) {
   return authRequest<Report>(`/orgs/reports/${reportId}`, token, {
-    method: "PATCH",
+    method: 'PATCH',
     body: JSON.stringify(body),
-  });
+  })
+}
+
+export async function uploadRawImage(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch('/api/upload', { method: 'POST', body: form })
+  const json = await res.json()
+  if (!json.status) throw new Error(json.result || 'Upload failed')
+  return json.result.path as string
 }

@@ -1,19 +1,28 @@
-import StatusBadge from "@/components/StatusBadge";
-import type { ReportCardData } from "@/lib/types";
-import Image from "next/image";
+import StatusBadge from '@/components/StatusBadge'
+import type { ReportCardData } from '@/lib/types'
+
+export type ReportCardDataWithOrg = ReportCardData & {
+  organization?: { id: string; name: string; branch_name?: string | null } | null
+}
 
 export default function ReportCard({
   report,
   onClick,
 }: {
-  report: ReportCardData;
-  onClick?: () => void;
+  report: ReportCardDataWithOrg
+  onClick?: () => void
 }) {
-  const thumb = report.image_urls[0] ?? report.raw_image_urls[0] ?? null;
+  const thumb = report.image_urls[0] ?? report.raw_image_urls[0] ?? null
   const date =
-    typeof report.submitted_at === "string"
+    typeof report.submitted_at === 'string'
       ? report.submitted_at
-      : report.submitted_at.toISOString();
+      : report.submitted_at.toISOString()
+
+  const orgLabel = report.organization
+    ? report.organization.branch_name
+      ? `${report.organization.name} – ${report.organization.branch_name}`
+      : report.organization.name
+    : null
 
   return (
     <button
@@ -23,7 +32,7 @@ export default function ReportCard({
     >
       <div className="flex gap-3">
         {thumb && (
-          <Image
+          <img
             src={thumb}
             alt=""
             className="w-16 h-16 rounded-lg object-cover border border-slate-100 shrink-0"
@@ -34,18 +43,24 @@ export default function ReportCard({
             <h2 className="font-medium text-slate-800">{report.title}</h2>
             <StatusBadge status={report.status} />
           </div>
-          <p className="text-sm text-slate-500 mt-1 line-clamp-2">
-            {report.description}
-          </p>
+          <p className="text-sm text-slate-500 mt-1 line-clamp-2">{report.description}</p>
           <div className="flex flex-wrap gap-x-3 mt-2 text-xs text-slate-400">
-            <span>{report.category ?? "Uncategorized"}</span>
+            <span>{report.category ?? 'Uncategorized'}</span>
             <span>·</span>
-            <span>{report.priority ?? "UNKNOWN"}</span>
+            <span>{report.priority ?? 'UNKNOWN'}</span>
             <span>·</span>
             <span>{new Date(date).toLocaleDateString()}</span>
           </div>
+          {orgLabel && (
+            <p className="text-xs text-slate-600 mt-1.5">
+              Assigned to <span className="font-medium text-slate-700">{orgLabel}</span>
+            </p>
+          )}
+          {!orgLabel && (
+            <p className="text-xs text-slate-400 mt-1.5">Unassigned</p>
+          )}
         </div>
       </div>
     </button>
-  );
+  )
 }
