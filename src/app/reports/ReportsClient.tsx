@@ -11,6 +11,7 @@ import { publicImageUrls, textToPascalCase } from "@/lib/utils";
 import MessageBox, { MessageBoxProps } from "@/components/MessageBox";
 import { Prisma } from "@/generated/prisma/client";
 import { useAuth } from "@/hooks/UseAuth";
+import { updateOrgReport } from "@/lib/api";
 
 type ReportFilters = {
   category?: ReportCategory;
@@ -78,8 +79,19 @@ export default function ReportsClient() {
     }, [category, status, assignedToMe, auth.token]);
 
   if (selected) {
-    return <ReportDetails report={selected} onBack={() => setSelected(null)} />;
-  }
+      return (
+        <ReportDetails
+          report={selected}
+          onBack={() => setSelected(null)}
+          onReportUpdate={(updated) => {
+            setSelected(updated);
+            setReports((prev) =>
+              prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)),
+            );
+          }}
+        />
+      );
+    }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -164,26 +176,102 @@ export default function ReportsClient() {
 function ReportDetails({
   report,
   onBack,
+  onReportUpdate,
 }: {
   report: ReportListItem;
   onBack: () => void;
+  onReportUpdate: (report: ReportListItem) => void;
 }) {
-  const images = publicImageUrls(report.image_urls, report.raw_image_urls)
+  const { auth } = useAuth();
+  const images = publicImageUrls(report.image_urls, report.raw_image_urls);
   const analysis = report.analysis as AnalysisJson | null;
+
+  const canManage =
+    !!auth.token && !!auth.userId && auth.userId === report.org_id;
+
+  const [commentText, setCommentText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [localMessage, setLocalMessage] = useState<MessageBoxProps | null>(null);
+
+  async function handleAddComment() {
+    if (!auth.token || !commentText.trim()) return;
+    setBusy(true);
+    setLocalMessage(null);
+    try {
+      const updated = await updateOrgReport(auth.token, report.id, {
+        comment: commentText.trim(),
+      });
+      setCommentText("");
+      onReportUpdate({ ...report, ...updated });
+    } catch (e) {
+      setLocalMessage({
+        messageType: "error",
+        message: e instanceof Error ? e.message : "Failed to add comment",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteComment(index: number) {
+    if (!auth.token) return;
+    setBusy(true);
+    setLocalMessage(null);
+    try {
+      const updated = await updateOrgReport(auth.token, report.id, {
+        delete_comment_index: index,
+      });
+      onReportUpdate({ ...report, ...updated });
+    } catch (e) {
+      setLocalMessage({
+        messageType: "error",
+        message: e instanceof Error ? e.message : "Failed to delete comment",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleStatusChange(status: ReportStatus) {
+    if (!auth.token) return;
+    setBusy(true);
+    setLocalMessage(null);
+    try {
+      const updated = await updateOrgReport(auth.token, report.id, { status });
+      onReportUpdate({ ...report, ...updated });
+    } catch (e) {
+      setLocalMessage({
+        messageType: "error",
+        message: e instanceof Error ? e.message : "Failed to update status",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-xl mx-auto">
       <button
+        type="button"
         onClick={onBack}
         className="text-sm text-slate-500 hover:text-slate-800 mb-4"
       >
         ← Back to all reports
       </button>
 
+      {localMessage && (
+        <div className="mb-4">
+          <MessageBox
+            messageType={localMessage.messageType}
+            message={localMessage.message}
+          />
+        </div>
+      )}
+
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
           <h2 className="font-semibold text-slate-800">{report.title}</h2>
-          <StatusBadge status={textToPascalCase(report.status || ReportStatus.PENDING) as ReportStatus} />
+          <StatusBadge status={report.status} />
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -205,8 +293,16 @@ function ReportDetails({
           )}
 
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <InfoItem label="Category" value={textToPascalCase(report.category || "Unknown Category")} />
-            <InfoItem label="Priority" value={textToPascalCase(report.priority || "Unknown") + " Priority"} />
+            <InfoItem
+              label="Category"
+              value={textToPascalCase(report.category || "Unknown Category")}
+            />
+            <InfoItem
+              label="Priority"
+              value={
+                textToPascalCase(report.priority || "Unknown") + " Priority"
+              }
+            />
             <InfoItem
               label="Submitted"
               value={new Date(report.submitted_at).toLocaleString()}
@@ -224,9 +320,40 @@ function ReportDetails({
                 ? report.organization.branch_name
                   ? `${report.organization.name} – ${report.organization.branch_name}`
                   : report.organization.name
-                : 'Unassigned'
+                : "Unassigned"
             }
           />
+
+          {/* Status controls — only for assigned organisation */}
+          {canManage && (
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-xs font-medium text-slate-500 mb-2">Status</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    "ASSIGNED",
+                    "IN_PROGRESS",
+                    "RESOLVED",
+                    "CLOSED",
+                  ] as ReportStatus[]
+                ).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handleStatusChange(s)}
+                    className={`text-xs px-2.5 py-1 rounded-full border ${
+                      report.status === s
+                        ? "bg-slate-800 text-white border-slate-800"
+                        : "bg-white text-slate-600 border-slate-200"
+                    } disabled:opacity-50`}
+                  >
+                    {textToPascalCase(s)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {analysis?.summary && (
             <div className="pt-3 border-t border-slate-100 space-y-1">
@@ -240,23 +367,60 @@ function ReportDetails({
             </div>
           )}
 
-          {report.comments.length > 0 && (
-            <div className="pt-3 border-t border-slate-100">
-              <p className="text-xs font-medium text-slate-500 mb-2">
-                Comments
-              </p>
-              <ul className="space-y-2">
+          {/* Comments */}
+          <div className="pt-3 border-t border-slate-100">
+            <p className="text-xs font-medium text-slate-500 mb-2">Comments</p>
+
+            {report.comments.length === 0 ? (
+              <p className="text-sm text-slate-400 mb-3">No comments yet.</p>
+            ) : (
+              <ul className="space-y-2 mb-3">
                 {report.comments.map((c, i) => (
                   <li
                     key={i}
-                    className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3"
+                    className="flex items-start gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3"
                   >
-                    {c}
+                    <span className="flex-1">{c}</span>
+                    {canManage && (
+                      <button
+                        type="button"
+                        title="Delete comment"
+                        disabled={busy}
+                        onClick={() => handleDeleteComment(i)}
+                        className="text-slate-400 hover:text-red-600 shrink-0 text-sm disabled:opacity-50"
+                      >
+                        🗑
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
+            )}
+
+            {canManage ? (
+              <div className="flex gap-2">
+                <input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="input-base flex-1 text-sm"
+                  placeholder="Add a public update…"
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddComment}
+                  disabled={busy || !commentText.trim()}
+                  className="px-3 py-2 text-sm rounded-lg bg-slate-800 text-white disabled:opacity-50"
+                >
+                  Post
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Comments are read-only.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
