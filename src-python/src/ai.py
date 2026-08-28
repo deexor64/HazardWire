@@ -13,6 +13,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 
+
+PRIORITIES = ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
 CATEGORIES = [
     "ROAD",
     "WATER",
@@ -26,23 +29,23 @@ CATEGORIES = [
     "CRIME",
     "GENERAL",
 ]
-PRIORITIES = ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
 SYSTEM_PROMPT = """You are a civic hazard dispatcher for Sri Lanka.
 
 Return ONLY valid JSON with keys:
-- category: one of ROAD, WATER, IRRIGATION, GARBAGE, ENVIRONMENT, ACCIDENT, CONSTRUCTION, CRIME, GENERAL
+- category: one of ROAD, WATER, ELECTRICITY, IRRIGATION, GARBAGE, ENVIRONMENT, ANIMALS, ACCIDENT, CONSTRUCTION, CRIME, GENERAL
 - priority: one of UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
 - cleaned_description: short clear text, no personal info
 - summary: one sentence
 - explanation: 1-2 sentences why category/priority fit (mention location if relevant)
 - priority_score: integer 0-100
 - image_tags: string array
-- match_keywords: string array of words useful to match an organization (e.g. road, drain, police)
+- match_keywords: string array of words useful to match an organization (e.g. road, drain, police, electricity, CEB)
 
 Rules:
 - CRITICAL = immediate danger to life
 - HIGH = major risk or infrastructure failure
+- ELECTRICITY = power lines, transformers, outages, electrocution risk
 - Use location context when provided
 - JSON only, no markdown
 """
@@ -52,10 +55,11 @@ def _norm_category(v: str) -> str:
     u = (v or "GENERAL").upper().replace(" ", "_")
     aliases = {
         "DRAINAGE": "IRRIGATION",
-        "ELECTRICITY": "GENERAL",
-        "ELECTRIC": "GENERAL",
+        "ELECTRIC": "ELECTRICITY",
+        "POWER": "ELECTRICITY",
         "OTHER": "GENERAL",
         "TRASH": "GARBAGE",
+        "ANIMAL": "ANIMALS",
     }
     u = aliases.get(u, u)
     return u if u in CATEGORIES else "GENERAL"
@@ -78,6 +82,16 @@ def _keyword_fallback(title: str, description: str) -> dict:
         cat, pri, score, kws = "GARBAGE", "LOW", 30, ["garbage", "waste"]
     elif any(w in text for w in ["accident", "crash", "collision"]):
         cat, pri, score, kws = "ACCIDENT", "HIGH", 75, ["accident", "police"]
+    elif any(
+        w in text
+        for w in ["electric", "wire", "power", "transformer", "current", "ceb"]
+    ):
+        cat, pri, score, kws = (
+            "ELECTRICITY",
+            "HIGH",
+            80,
+            ["electricity", "power", "CEB"],
+        )
     else:
         cat, pri, score, kws = "GENERAL", "MEDIUM", 40, ["general"]
 

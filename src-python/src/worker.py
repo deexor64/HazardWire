@@ -67,11 +67,10 @@ def find_organization(
     report_geo: dict,
     match_keywords: list[str],
     category: str,
-) -> str | None:
+) -> tuple[str | None, str]:
     """
-    Score organizations by:
-      - distance from org.geo (if set)
-      - keyword / responsibility / coverage text overlap
+    Score organizations by keyword/coverage overlap and distance.
+    Returns (org_id or None, human-readable reason).
     """
     try:
         res = (
@@ -84,10 +83,10 @@ def find_organization(
         orgs = res.data or []
     except Exception as e:
         print(f"  org fetch failed: {e}")
-        return None
+        return None, f"Organization lookup failed: {e}"
 
     if not orgs:
-        return None
+        return None, "No organizations registered in the system."
 
     needles = set(k.lower() for k in (match_keywords or []))
     needles.add(category.lower())
@@ -97,12 +96,15 @@ def find_organization(
             needles.add(str(val).lower())
 
     best_id = None
+    best_name = None
     best_score = -1.0
+    best_hits: list[str] = []
+    best_dist = None
 
     for org in orgs:
         score = 0.0
+        hit_list: list[str] = []
 
-        # Text overlap
         blob = " ".join(
             [
                 org.get("name") or "",
@@ -113,14 +115,15 @@ def find_organization(
             ]
         ).lower()
 
-        hits = sum(1 for n in needles if n and n in blob)
-        score += hits * 10
+        for n in needles:
+            if n and n in blob:
+                score += 10
+                hit_list.append(n)
 
-        # Distance (closer is better; org without geo gets small penalty)
         pair = org_lat_lng(org)
+        dist = None
         if pair:
             dist = haversine_km(report_lat, report_lng, pair[0], pair[1])
-            # within 50km preferred
             score += max(0.0, 30.0 - dist)
         else:
             score -= 5.0
@@ -128,11 +131,23 @@ def find_organization(
         if score > best_score:
             best_score = score
             best_id = org["id"]
+            best_name = org.get("name") or org["id"]
+            best_hits = hit_list
+            best_dist = dist
 
-    # Require some signal
-    if best_score < 5:
-        return None
-    return best_id
+    if best_score < 5 or not best_id:
+        return None, (
+            f"No organisation scored high enough (best score {best_score:.1f}). "
+            "Left unassigned."
+        )
+
+    parts = [f"Assigned to {best_name}"]
+    if best_hits:
+        parts.append("matched terms: " + ", ".join(best_hits[:8]))
+    if best_dist is not None:
+        parts.append(f"distance ~{best_dist:.1f} km from organisation HQ")
+    parts.append(f"score {best_score:.1f}")
+    return best_id, ". ".join(parts) + "."
 
 
 def process_job(job: dict) -> None:
@@ -187,13 +202,14 @@ def process_job(job: dict) -> None:
         priority = analysis["priority"]
 
         # 4) Assign org (geo + keywords)
-        org_id = find_organization(
+        org_id, routing_reason = find_organization(
             report_lat=lat,
             report_lng=lng,
             report_geo=geo,
             match_keywords=analysis.get("match_keywords") or [],
             category=category,
         )
+        analysis["routing_reason"] = routing_reason
 
         update = {
             "category": category,
@@ -206,9 +222,9 @@ def process_job(job: dict) -> None:
         }
         if org_id:
             update["org_id"] = org_id
-            print(f"  → Assigned org {org_id}")
+            print(f"  → {routing_reason}")
         else:
-            print("  → No org match (left PENDING)")
+            print(f"  → {routing_reason}")
 
         supabase.table("reports").update(update).eq("id", report_id).execute()
         complete_job(job_id)

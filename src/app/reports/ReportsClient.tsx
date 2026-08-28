@@ -29,10 +29,14 @@ type ReportListItem = Prisma.ReportGetPayload<{
   };
 }>;
 
-type AnalysisJson = {
+export type AnalysisJson = {
   summary?: string;
   explanation?: string;
+  routing_reason?: string;
   priority_score?: number;
+  image_tags?: string[];
+  match_keywords?: string[];
+  model?: string;
 };
 
 export default function ReportsClient() {
@@ -355,14 +359,24 @@ function ReportDetails({
             </div>
           )}
 
-          {analysis?.summary && (
-            <div className="pt-3 border-t border-slate-100 space-y-1">
+          {analysis && (analysis.summary || analysis.explanation || analysis.routing_reason) && (
+            <div className="pt-3 border-t border-slate-100 space-y-2">
               <p className="text-xs font-medium text-slate-500">
                 System analysis
               </p>
-              <p className="text-sm text-slate-600">{analysis.summary}</p>
+              {analysis.summary && (
+                <p className="text-sm text-slate-600">{analysis.summary}</p>
+              )}
               {analysis.explanation && (
                 <p className="text-sm text-slate-500">{analysis.explanation}</p>
+              )}
+              {analysis.routing_reason && (
+                <p className="text-sm text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-3">
+                  <span className="text-xs font-medium text-slate-500 block mb-1">
+                    Routing
+                  </span>
+                  {analysis.routing_reason}
+                </p>
               )}
             </div>
           )}
