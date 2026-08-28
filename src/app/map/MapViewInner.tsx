@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getReports } from '@/lib/api'
+import { textToPascalCase } from '@/lib/utils'
+import { ReportStatus } from '@/generated/prisma/enums'
 
 const PRIORITY_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -127,13 +129,13 @@ export default function MapViewInner() {
             </p>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <StatusBadge status={selected.status} />
+              <StatusBadge status={textToPascalCase(selected.status)} />
               <span className="text-slate-400 capitalize">
-                {selected.category || 'Uncategorized'}
+                {textToPascalCase(selected.category || "Unknown Category")}
               </span>
               <span className="text-slate-300">·</span>
               <span className="text-slate-400">
-                {selected.priority || 'UNKNOWN'} priority
+                {textToPascalCase(selected.priority || 'Unknown')} priority
               </span>
             </div>
           </div>
@@ -142,7 +144,7 @@ export default function MapViewInner() {
 
       {/* Simple legend */}
       <div className="absolute z-1000 bottom-4 left-4 bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-sm hidden sm:block">
-        <p className="text-[10px] font-medium text-slate-500 mb-1.5">Severity</p>
+        <p className="text-[10px] font-medium text-slate-500 mb-1.5">Priority</p>
         <div className="flex flex-col gap-1">
           {Object.entries(PRIORITY_COLORS).map(([key, color]) => (
             <div key={key} className="flex items-center gap-1.5">
@@ -150,7 +152,7 @@ export default function MapViewInner() {
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-[10px] text-slate-600 capitalize">{key}</span>
+              <span className="text-[10px] text-slate-600 ">{textToPascalCase(key)}</span>
             </div>
           ))}
         </div>
@@ -169,12 +171,12 @@ function StatusBadge({ status }: { status: string }) {
     closed: 'bg-slate-100 text-slate-600 border-slate-200',
   }
 
-  const key = (status || 'PENDING').toLowerCase()
+  const key = (textToPascalCase(status || ReportStatus.PENDING)).toLowerCase()
   const style = styles[key] || styles.pending
 
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border capitalize ${style}`}>
-      {status?.replace('_', ' ') || 'Unknown'}
+      {textToPascalCase(status) || 'Unknown'}
     </span>
   )
 }

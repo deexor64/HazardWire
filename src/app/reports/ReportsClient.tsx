@@ -5,66 +5,96 @@ import { getReports } from "@/lib/api";
 import ReportCard from "@/components/ReportCard";
 import StatusBadge from "@/components/StatusBadge";
 import InfoItem from "@/components/InfoItem";
-import type { ReportCategory, ReportStatus } from "@/generated/prisma/client";
-import type { AnalysisJson, ReportListItem } from "@/lib/types";
+import { ReportCategory, ReportStatus } from "@/generated/prisma/enums";
 import Image from "next/image";
-import { publicImageUrls } from "@/lib/utils";
+import { publicImageUrls, textToPascalCase } from "@/lib/utils";
+import MessageBox, { MessageBoxProps } from "@/components/MessageBox";
+import { Prisma } from "@/generated/prisma/client";
+import { useAuth } from "@/hooks/UseAuth";
 
-const CATEGORIES: ReportCategory[] = [
-  "ROAD",
-  "WATER",
-  "IRRIGATION",
-  "GARBAGE",
-  "ENVIRONMENT",
-  "ACCIDENT",
-  "CONSTRUCTION",
-  "CRIME",
-  "GENERAL",
-];
+type ReportFilters = {
+  category?: ReportCategory;
+  status?: ReportStatus;
+  assigned_to_me?: boolean;
+  page?: number;
+  page_size?: number;
+};
 
-const STATUSES: ReportStatus[] = [
-  "PENDING",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "RESOLVED",
-  "CLOSED",
-];
+type ReportListItem = Prisma.ReportGetPayload<{
+  include: {
+    organization: {
+      select: { id: true; name: true; branch_name: true };
+    };
+  };
+}>;
+
+type AnalysisJson = {
+  summary?: string;
+  explanation?: string;
+  priority_score?: number;
+};
 
 export default function ReportsClient() {
+  const { auth } = useAuth();
+
   const [reports, setReports] = useState<ReportListItem[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState<MessageBoxProps | null>(null);
   const [selected, setSelected] = useState<ReportListItem | null>(null);
+
+  // Filters
   const [category, setCategory] = useState<ReportCategory | "">("");
   const [status, setStatus] = useState<ReportStatus | "">("");
+  const [assignedToMe, setAssignedToMe] = useState(false);
+
+  useEffect(() => {
+      if (!auth.token && assignedToMe) {
+        setAssignedToMe(false);
+      }
+    }, [auth.token, assignedToMe]);
 
   useEffect(() => {
     setLoading(true);
-    setError("");
-    getReports({
-      page_size: 50,
-      category: category || undefined,
-      status: status || undefined,
-    })
+    setMessage(null);
+
+    getReports(
+      {
+        page_size: 50,
+        category: category || undefined,
+        status: status || undefined,
+        assigned_to_me: assignedToMe ? true : undefined,
+      },
+      assignedToMe ? auth.token : null,
+    )
       .then((data) => setReports(data.results ?? []))
-      .catch((e: Error) => setError(e.message))
+      .catch(() =>
+        setMessage({
+          messageType: "error",
+          message: "Failed to fetch reports",
+        }),
+      )
       .finally(() => setLoading(false));
-  }, [category, status]);
+    }, [category, status, assignedToMe, auth.token]);
 
   if (selected) {
-    return <ReportDetail report={selected} onBack={() => setSelected(null)} />;
+    return <ReportDetails report={selected} onBack={() => setSelected(null)} />;
   }
 
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-800">All Reports</h1>
+        <h1 className="text-xl font-semibold text-slate-800">
+          {assignedToMe ? "Assigned to me" : "All Reports"}
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Public list of reported hazards across the country.
+          {assignedToMe
+            ? "Reports assigned to your organisation."
+            : "Public list of reported hazards across the country."}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <select
           value={category}
           onChange={(e) =>
@@ -73,9 +103,9 @@ export default function ReportsClient() {
           className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white"
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((c) => (
+          {Object.values(ReportCategory).map((c) => (
             <option key={c} value={c}>
-              {c}
+              {textToPascalCase(c)}
             </option>
           ))}
         </select>
@@ -88,18 +118,30 @@ export default function ReportsClient() {
           className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white"
         >
           <option value="">All Statuses</option>
-          {STATUSES.map((s) => (
+          {Object.values(ReportStatus).map((s) => (
             <option key={s} value={s}>
-              {s}
+              {textToPascalCase(s)}
             </option>
           ))}
         </select>
+
+        {/* Only for logged-in organisations */}
+        {auth.token && (
+          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={assignedToMe}
+              onChange={(e) => setAssignedToMe(e.target.checked)}
+              className="rounded border-slate-300"
+            />
+            Assigned to Me
+          </label>
+        )}
       </div>
 
-      {error && (
-        <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
+      {/* message / loading / list — same as before */}
+      {message && (
+        <MessageBox messageType={message.messageType} message={message.message} />
       )}
 
       {loading ? (
@@ -119,7 +161,7 @@ export default function ReportsClient() {
   );
 }
 
-function ReportDetail({
+function ReportDetails({
   report,
   onBack,
 }: {
@@ -141,7 +183,7 @@ function ReportDetail({
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
           <h2 className="font-semibold text-slate-800">{report.title}</h2>
-          <StatusBadge status={report.status} />
+          <StatusBadge status={textToPascalCase(report.status || ReportStatus.PENDING) as ReportStatus} />
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -163,8 +205,8 @@ function ReportDetail({
           )}
 
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <InfoItem label="Category" value={report.category ?? "—"} />
-            <InfoItem label="Priority" value={report.priority ?? "—"} />
+            <InfoItem label="Category" value={textToPascalCase(report.category || "Unknown Category")} />
+            <InfoItem label="Priority" value={textToPascalCase(report.priority || "Unknown") + " Priority"} />
             <InfoItem
               label="Submitted"
               value={new Date(report.submitted_at).toLocaleString()}

@@ -1,4 +1,6 @@
 import { ReportCategory, ReportPriority, ReportStatus } from "@/generated/prisma/enums"
+import { Geo } from "./types"
+import { JsonValue } from "@/generated/prisma/internal/prismaNamespace"
 
 export const SEVERITY_COLOR: Record<ReportPriority, string> = {
   CRITICAL: '#ef4444',
@@ -94,4 +96,15 @@ export function publicImageUrls(
   return preferred.filter(
     (u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))
   )
+}
+
+export function readGeoFromJson(geo: JsonValue): Geo {
+  const g = geo
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return {}
+  return g as Geo
+}
+
+export function textToPascalCase(text: string): string {
+  const t = text.replaceAll("_", "-");
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
 }

@@ -16,9 +16,11 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 CATEGORIES = [
     "ROAD",
     "WATER",
+    "ELECTRICITY",
     "IRRIGATION",
     "GARBAGE",
     "ENVIRONMENT",
+    "ANIMALS",
     "ACCIDENT",
     "CONSTRUCTION",
     "CRIME",

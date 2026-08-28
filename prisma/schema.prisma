@@ -10,9 +10,11 @@ datasource db {
 enum ReportCategory {
   ROAD
   WATER
+  ELECTRICITY
   IRRIGATION
   GARBAGE
   ENVIRONMENT
+  ANIMALS
   ACCIDENT
   CONSTRUCTION
   CRIME

@@ -1,28 +1,33 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import type { AuthState } from '@/lib/types'
+import { createContext, useEffect, useState } from 'react'
+
+export type AuthState = {
+  token: string | null;
+  userId: string | null;
+  email: string | null;
+};
 
 const STORAGE_KEY = 'hazardwire_auth'
-
-const DEFAULT_AUTH: AuthState = {
-  token: null,
-  userId: null,
-  email: null,
-}
 
 interface AuthContextValue {
   auth: AuthState
   setAuth: (state: AuthState) => void
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  auth: DEFAULT_AUTH,
+const AUTH_DEFAULT: AuthState = {
+  token: null,
+  userId: null,
+  email: null,
+}
+
+export const AuthContext = createContext<AuthContextValue>({
+  auth: AUTH_DEFAULT,
   setAuth: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [auth, setAuthState] = useState<AuthState>(DEFAULT_AUTH)
+  const [auth, setAuthState] = useState<AuthState>(AUTH_DEFAULT)
   const [hydrated, setHydrated] = useState(false)
 
   // Hydrate from localStorage on mount (client-only)
@@ -31,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) setAuthState(JSON.parse(saved))
     } catch {
-      // ignore malformed JSON
+      console.log('Failed to parse auth state from localStorage')
     }
     setHydrated(true)
   }, [])
@@ -55,8 +60,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  return useContext(AuthContext)
 }

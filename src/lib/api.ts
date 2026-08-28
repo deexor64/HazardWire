@@ -27,14 +27,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return json.result;
 }
 
-export function getReports(filters: ReportFilters = {}) {
+export function getReports(
+  filters: ReportFilters = {},
+  token?: string | null,
+) {
   const params = new URLSearchParams();
   if (filters.category) params.set("category", filters.category);
   if (filters.status) params.set("status", filters.status);
+  if (filters.assigned_to_me) params.set("assigned_to_me", "true");
   if (filters.page) params.set("page", String(filters.page));
   if (filters.page_size) params.set("page_size", String(filters.page_size));
   const qs = params.toString();
-  return request<ReportListResult>(`/reports${qs ? `?${qs}` : ""}`);
+
+  return request<ReportListResult>(`/reports${qs ? `?${qs}` : ""}`, {
+    headers: token
+      ? { Authorization: `Bearer ${token}` }
+      : undefined,
+  });
 }
 
 export function getReportByToken(token: string) {
@@ -89,29 +98,30 @@ export function getOrgProfile(token: string) {
 export function updateOrgProfile(
   token: string,
   body: Partial<{
-    name: string
-    branch_name: string | null
-    description: string | null
-    phones: string[]
-    address: string | null
-    website: string | null
-    coverage_region: string | null
-    coverage_areas: string[]
-    responsibilities: string[]
-    keywords: string[]
-    geo: {
-      lat: number
-      lng: number
-      display_name?: string
-      city?: string
-      state?: string
-    } | null
+    name: string;
+    email: string;
+    branch_name: string | null;
+    org_type: "GOVERNMENT" | "NON_GOVERNMENT";
+    description: string | null;
+    phones: string[];
+    address: string | null;
+    website: string | null;
+    logo_url: string | null;
+    cover_url: string | null;
+    coverage_region: string | null;
+    coverage_areas: string[];
+    responsibilities: string[];
+    keywords: string[];
+    reference_links: string[];
+    compliance: string[];
+    laws: string[];
+    geo: { lat: number; lng: number } | null;
   }>,
 ) {
-  return authRequest<Organization>('/orgs/profile', token, {
-    method: 'PUT',
+  return authRequest<Organization>("/orgs/profile", token, {
+    method: "PUT",
     body: JSON.stringify(body),
-  })
+  });
 }
 
 export function getOrgReports(token: string) {

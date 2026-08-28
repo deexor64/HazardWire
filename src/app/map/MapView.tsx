@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 
 // Leaflet mutates window/document — must be loaded client-side only

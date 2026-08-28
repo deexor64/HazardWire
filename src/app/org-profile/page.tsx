@@ -1,4 +1,4 @@
-import OrgsClient from "./OrgsClient";
+import OrgProfilePage from "./OrgProfilePage";
 
 export const metadata = {
   title: "Organisation – HazardWire",
@@ -6,6 +6,6 @@ export const metadata = {
     "Sign in or register your organisation to manage hazard reports.",
 };
 
-export default function OrgsPage() {
-  return <OrgsClient />;
+export default function Page() {
+  return <OrgProfilePage />;
 }

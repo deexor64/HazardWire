@@ -1,14 +1,14 @@
-import MapView from '@/components/MapView'
+"use client"
 
-export const metadata = {
-  title: 'Map – HazardWire',
-  description: 'Live map of reported hazards across the country.',
-}
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
-export default function MapPage() {
-  return (
-    <div className="h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-slate-200 bg-white">
-      <MapView />
-    </div>
-  )
+export default function Page() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace('/submit')
+  })
+
+  return null
 }

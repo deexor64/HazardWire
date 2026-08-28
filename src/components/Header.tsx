@@ -2,16 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/hooks/UseAuth";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Map" },
-  { href: "/reports", label: "Reports" },
-  { href: "/submit", label: "Submit" },
-  { href: "/my-reports", label: "My Reports" },
-  { href: "/organizations", label: "Organizations" }, // public directory
-  { href: "/orgs", label: "Org Login" }, // portal
-];
 
 export default function Header() {
   const pathname = usePathname();
@@ -30,25 +22,12 @@ export default function Header() {
 
         {/* Nav links */}
         <nav className="flex items-center gap-1 overflow-x-auto">
-          {NAV_ITEMS.map(({ href, label }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
-                  isActive
-                    ? href === "/submit"
-                      ? "bg-orange-500 text-white"
-                      : "bg-slate-800 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
+          <NavLink href="/map" label="Map" pathname={pathname} />
+          <NavLink href="/reports" label="Reports" pathname={pathname} />
+          <NavLink href="/submit" label="Submit" pathname={pathname} />
+          <NavLink href="/my-reports" label="My Reports" pathname={pathname} />
+          <NavLink href="/organizations" label="Organizations" pathname={pathname} />
+          <NavLink href={auth.token ? "/org-profile" : "/org-login"} label={auth.token ? "Dashboard" : "Org Login"} pathname={pathname} />
         </nav>
 
         {/* Auth state */}
@@ -62,4 +41,23 @@ export default function Header() {
       </div>
     </header>
   );
+}
+
+
+function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  return <Link
+    key={href}
+    href={href}
+    className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+      isActive
+        ? href === "/submit"
+          ? "bg-orange-500 text-white"
+          : "bg-slate-800 text-white"
+        : "text-slate-600 hover:bg-slate-100"
+    }`}
+  >
+    {label}
+  </Link>
 }
