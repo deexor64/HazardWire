@@ -5,6 +5,8 @@ import urllib.request
 
 from dotenv import load_dotenv
 
+from .juridiction_rules import format_rules_for_prompt, retrieve_rules
+
 load_dotenv()
 
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
@@ -48,6 +50,9 @@ Rules:
 - ELECTRICITY = power lines, transformers, outages, electrocution risk
 - Use location context when provided
 - JSON only, no markdown
+
+Use the retrieved jurisdiction guidance when choosing category and match_keywords.
+Prefer the agency that matches both the hazard type and the road/local context.
 """
 
 
@@ -168,7 +173,7 @@ def _call_gemini(
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     contents: list = [
-        f"{SYSTEM_PROMPT}\n\nTitle: {title}\nDescription: {description}\n{_geo_block(geo)}"
+        f"{SYSTEM_PROMPT}\n\n{rules_block}\n\nTitle: {title}\nDescription: {description}\n{_geo_block(geo)}"
     ]
 
     for url in (image_urls or [])[:2]:
@@ -234,14 +239,24 @@ def analyze_report(
 ) -> dict:
     title, description = title or "", description or ""
     image_urls = image_urls or []
+
+    rules = retrieve_rules(title, description, top_k=3)
+    rules_block = format_rules_for_prompt(rules)
+
     try:
         if AI_PROVIDER == "ollama":
             print("  AI provider: ollama")
-            return _call_ollama(title, description, image_urls, geo)
-        print("  AI provider: gemini")
-        if not GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY not set")
-        return _call_gemini(title, description, image_urls, geo)
+            result = _call_ollama(title, description, image_urls, geo, rules_block)
+        else:
+            print("  AI provider: gemini")
+            if not GEMINI_API_KEY:
+                raise ValueError("GEMINI_API_KEY not set")
+            result = _call_gemini(title, description, image_urls, geo, rules_block)
+
+        result["retrieved_rules"] = [r["id"] for r in rules]
+        return result
     except Exception as e:
         print(f"  AI failed ({e}), keyword fallback")
-        return _keyword_fallback(title, description)
+        fb = _keyword_fallback(title, description)
+        fb["retrieved_rules"] = [r["id"] for r in rules]
+        return fb

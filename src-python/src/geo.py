@@ -42,6 +42,8 @@ def reverse_geocode(lat: float, lng: float) -> dict:
             "state": addr.get("state"),
             "country": addr.get("country"),
             "postal_code": addr.get("postcode"),
+            "osm_type": data.get("type"),
+            "osm_class": data.get("class"),
         }
     except Exception as e:
         print(f"  reverse_geocode failed: {e}")

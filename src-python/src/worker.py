@@ -173,6 +173,20 @@ def process_job(job: dict) -> None:
         lng = float(report["longitude"])
         raw_paths = report.get("raw_image_urls") or []
 
+        # Duplicate check
+        print("  Checking duplicates...")
+        duplicates = find_duplicates(report_id, lat, lng, radius_km=0.3)
+        dup_info = [
+            {
+                "id": d["id"],
+                "title": d.get("title"),
+                "status": d.get("status"),
+                "category": d.get("category"),
+                "distance_km": d["distance_km"],
+            }
+            for d in duplicates
+        ]
+
         # 1) Privacy blur → public image_urls
         privacy = {"blurred": False, "faces": 0, "plates": 0}
         image_urls: list[str] = list(report.get("image_urls") or [])
@@ -211,6 +225,9 @@ def process_job(job: dict) -> None:
         )
         analysis["routing_reason"] = routing_reason
 
+        analysis["duplicates"] = dup_info
+                analysis["possible_duplicate"] = len(dup_info) > 0
+
         update = {
             "category": category,
             "priority": priority,
@@ -233,6 +250,50 @@ def process_job(job: dict) -> None:
     except Exception as e:
         print(f"Job {job_id} failed: {e}")
         fail_job(job_id)
+
+
+def find_duplicates(
+    report_id: str,
+    lat: float,
+    lng: float,
+    radius_km: float = 0.3,
+    limit: int = 5,
+) -> list[dict]:
+    """
+    Nearby reports that are still open (not RESOLVED/CLOSED).
+    Uses bounding box then haversine filter.
+    """
+    # ~0.3 km box in degrees (rough)
+    d = radius_km / 111.0
+    try:
+        res = (
+            supabase.table("reports")
+            .select("id, title, status, category, latitude, longitude")
+            .neq("id", report_id)
+            .neq("status", "RESOLVED")
+            .neq("status", "CLOSED")
+            .gte("latitude", lat - d)
+            .lte("latitude", lat + d)
+            .gte("longitude", lng - d)
+            .lte("longitude", lng + d)
+            .limit(30)
+            .execute()
+        )
+        rows = res.data or []
+    except Exception as e:
+        print(f"  duplicate query failed: {e}")
+        return []
+
+    out = []
+    for r in rows:
+        try:
+            dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
+        except Exception:
+            continue
+        if dist <= radius_km:
+            out.append({**r, "distance_km": round(dist, 3)})
+    out.sort(key=lambda x: x["distance_km"])
+    return out[:limit]
 
 
 def run_worker(poll_interval: int = 20) -> None:

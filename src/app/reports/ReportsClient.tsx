@@ -30,14 +30,17 @@ type ReportListItem = Prisma.ReportGetPayload<{
 }>;
 
 export type AnalysisJson = {
-  summary?: string;
-  explanation?: string;
-  routing_reason?: string;
-  priority_score?: number;
-  image_tags?: string[];
-  match_keywords?: string[];
-  model?: string;
-};
+  summary?: string
+  explanation?: string
+  routing_reason?: string
+  priority_score?: number
+  image_tags?: string[]
+  match_keywords?: string[]
+  model?: string
+  possible_duplicate?: boolean
+  duplicates?: { id: string; title?: string; status?: string; distance_km?: number }[]
+  retrieved_rules?: string[]
+}
 
 export default function ReportsClient() {
   const { auth } = useAuth();
@@ -377,6 +380,20 @@ function ReportDetails({
                   </span>
                   {analysis.routing_reason}
                 </p>
+              )}
+              {analysis.possible_duplicate && analysis.duplicates && analysis.duplicates.length > 0 && (
+                <div className="text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-900">
+                  <p className="text-xs font-medium mb-1">Possible duplicate nearby</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {analysis.duplicates.map((d) => (
+                      <li key={d.id}>
+                        {d.title || d.id}
+                        {d.distance_km != null ? ` (~${d.distance_km} km)` : ""}
+                        {d.status ? ` · ${d.status}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}
