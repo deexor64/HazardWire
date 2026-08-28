@@ -28,12 +28,33 @@ export default function OrganizationsClient() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<MessageBoxProps | null>(null);
 
+  // Filters
+  const [nameQuery, setNameQuery] = useState("");
+  const [orgType, setOrgType] = useState<OrgType | "">("");
+
   useEffect(() => {
     getOrgs()
       .then(setOrgs)
-      .catch((e: Error) => setMessage({ message: e.message, messageType: "error" }))
+      .catch((e: Error) =>
+        setMessage({ message: e.message, messageType: "error" }),
+      )
       .finally(() => setLoading(false));
   }, []);
+
+  // Apply filters (explicit)
+  const nameLower = nameQuery.trim().toLowerCase();
+  const filtered = orgs.filter((org) => {
+    if (orgType && org.org_type !== orgType) {
+      return false;
+    }
+    if (nameLower) {
+      const label = `${org.name} ${org.branch_name || ""}`.toLowerCase();
+      if (!label.includes(nameLower)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -45,15 +66,43 @@ export default function OrganizationsClient() {
         </p>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <input
+          type="text"
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder="Search by name…"
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white min-w-[12rem] flex-1"
+        />
+
+        <select
+          value={orgType}
+          onChange={(e) => setOrgType((e.target.value || "") as OrgType | "")}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white"
+        >
+          <option value="">All types</option>
+          {Object.values(OrgType).map((t) => (
+            <option key={t} value={t}>
+              {textToPascalCase(t)}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Message box */}
       {message && <MessageBox {...message} />}
 
       {/* Content */}
       {loading ? (
         <div className="text-center py-16 text-slate-500 text-sm">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-slate-500 text-sm">
+          No organisations found.
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {orgs.map((org) => (
+          {filtered.map((org) => (
             <OrgCard key={org.id} org={org} setSelected={setSelected} />
           ))}
         </div>
@@ -66,6 +115,7 @@ export default function OrganizationsClient() {
     </div>
   );
 }
+
 
 function OrgCard({ org, setSelected }: { org: OrgCardData; setSelected: React.Dispatch<React.SetStateAction<OrgCardData | null>> }) {
   return (
