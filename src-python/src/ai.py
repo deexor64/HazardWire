@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from .juridiction_rules import format_rules_for_prompt, retrieve_rules
 
-load_dotenv()
+_ = load_dotenv()
 
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
