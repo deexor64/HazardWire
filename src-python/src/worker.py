@@ -226,7 +226,7 @@ def process_job(job: dict) -> None:
         analysis["routing_reason"] = routing_reason
 
         analysis["duplicates"] = dup_info
-                analysis["possible_duplicate"] = len(dup_info) > 0
+        analysis["possible_duplicate"] = len(dup_info) > 0
 
         update = {
             "category": category,
