@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@supabase/supabase-js";
+import { Geo } from "@/lib/types";
 
 function supabaseUserClient(token: string) {
   return createClient(
@@ -97,7 +98,7 @@ type ProfileUpdateBody = {
   description?: string | null;
   phones?: string[];
   address?: string | null;
-  geo?: { lat: number; lng: number; display_name?: string; city?: string; state?: string } | null
+  geo?: Geo | null
   website?: string | null;
   coverage_region?: string | null;
   coverage_areas?: string[];
@@ -125,7 +126,7 @@ export async function PUT(req: NextRequest) {
         description: body.description,
         phones: body.phones,
         address: body.address,
-        geo: body.geo === undefined ? undefined : body.geo,
+        geo: body.geo === undefined ? undefined : body.geo as Geo,
         website: body.website,
         coverage_region: body.coverage_region,
         coverage_areas: body.coverage_areas,

@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { getReports } from '@/lib/api'
 import { textToPascalCase } from '@/lib/utils'
 import { ReportStatus } from '@/generated/prisma/enums'
@@ -27,33 +25,49 @@ function createMarkerSvg(priority: string | null | undefined) {
 }
 
 export default function MapViewInner() {
-  const mapRef = useRef<L.Map | null>(null)
+  const mapRef = useRef<import('leaflet').Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const markersRef = useRef<L.Marker[]>([])
+  const markersRef = useRef<import('leaflet').Marker[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<any>(null)
 
   // Init map
+  // Init map (load Leaflet only in the browser)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
-    const map = L.map(containerRef.current, {
-      center: [7.8731, 80.7718],
-      zoom: 8,
-      zoomControl: true,
-    })
+    let cancelled = false
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19,
-    }).addTo(map)
+    async function init() {
+      const leaflet = await import('leaflet')
+      await import('leaflet/dist/leaflet.css')
+      const L = leaflet.default
 
-    mapRef.current = map
+      if (cancelled || !containerRef.current || mapRef.current) return
+
+      const map = L.map(containerRef.current, {
+        center: [7.8731, 80.7718],
+        zoom: 8,
+        zoomControl: true,
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(map)
+
+      mapRef.current = map
+    }
+
+    void init()
 
     return () => {
-      map.remove()
-      mapRef.current = null
+      cancelled = true
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
     }
   }, [])
 
@@ -69,31 +83,45 @@ export default function MapViewInner() {
   }, [])
 
   // Draw markers
+  // Draw markers
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
 
-    // Clear old markers
-    markersRef.current.forEach((m) => m.remove())
-    markersRef.current = []
+    let cancelled = false
 
-    reports.forEach((report) => {
-      if (report.latitude == null || report.longitude == null) return
+    async function draw() {
+      const leaflet = await import('leaflet')
+      const L = leaflet.default
+      if (cancelled || !mapRef.current) return
 
-      const icon = L.divIcon({
-        html: createMarkerSvg(report.priority),
-        className: '',
-        iconSize: [28, 36],
-        iconAnchor: [14, 36],
-        popupAnchor: [0, -36],
+      markersRef.current.forEach((m) => m.remove())
+      markersRef.current = []
+
+      reports.forEach((report) => {
+        if (report.latitude == null || report.longitude == null) return
+
+        const icon = L.divIcon({
+          html: createMarkerSvg(report.priority),
+          className: '',
+          iconSize: [28, 36],
+          iconAnchor: [14, 36],
+          popupAnchor: [0, -36],
+        })
+
+        const marker = L.marker([report.latitude, report.longitude], { icon })
+          .addTo(mapRef.current!)
+          .on('click', () => setSelected(report))
+
+        markersRef.current.push(marker)
       })
+    }
 
-      const marker = L.marker([report.latitude, report.longitude], { icon })
-        .addTo(map)
-        .on('click', () => setSelected(report))
+    void draw()
 
-      markersRef.current.push(marker)
-    })
+    return () => {
+      cancelled = true
+    }
   }, [reports])
 
   return (

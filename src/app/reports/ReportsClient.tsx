@@ -9,38 +9,10 @@ import { ReportCategory, ReportStatus } from "@/generated/prisma/enums";
 import Image from "next/image";
 import { publicImageUrls, textToPascalCase } from "@/lib/utils";
 import MessageBox, { MessageBoxProps } from "@/components/MessageBox";
-import { Prisma } from "@/generated/prisma/client";
 import { useAuth } from "@/hooks/UseAuth";
 import { updateOrgReport } from "@/lib/api";
+import { AnalysisJson, ReportListItem } from "@/lib/types";
 
-type ReportFilters = {
-  category?: ReportCategory;
-  status?: ReportStatus;
-  assigned_to_me?: boolean;
-  page?: number;
-  page_size?: number;
-};
-
-type ReportListItem = Prisma.ReportGetPayload<{
-  include: {
-    organization: {
-      select: { id: true; name: true; branch_name: true };
-    };
-  };
-}>;
-
-export type AnalysisJson = {
-  summary?: string
-  explanation?: string
-  routing_reason?: string
-  priority_score?: number
-  image_tags?: string[]
-  match_keywords?: string[]
-  model?: string
-  possible_duplicate?: boolean
-  duplicates?: { id: string; title?: string; status?: string; distance_km?: number }[]
-  retrieved_rules?: string[]
-}
 
 export default function ReportsClient() {
   const { auth } = useAuth();

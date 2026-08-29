@@ -2,7 +2,6 @@ import type {
   ApiResponse,
   ReportFilters,
   ReportListItem,
-  ReportListResult,
   ReportSubmitInput,
   SubmitResult,
   OrgCardData,
@@ -39,7 +38,8 @@ export function getReports(
   if (filters.page_size) params.set("page_size", String(filters.page_size));
   const qs = params.toString();
 
-  return request<ReportListResult>(`/reports${qs ? `?${qs}` : ""}`, {
+  // ReportListResult
+  return request<any>(`/reports${qs ? `?${qs}` : ""}`, {
     headers: token
       ? { Authorization: `Bearer ${token}` }
       : undefined,
