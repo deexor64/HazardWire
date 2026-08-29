@@ -165,6 +165,7 @@ def _call_gemini(
     description: str,
     image_urls: list[str] | None = None,
     geo: dict | None = None,
+    rules_block: str = "",
 ) -> dict:
     import urllib.request as urlreq
 
@@ -205,8 +206,9 @@ def _call_ollama(
     description: str,
     image_urls: list[str] | None = None,
     geo: dict | None = None,
+    rules_block: str = "",
 ) -> dict:
-    user_prompt = f"Title: {title}\nDescription: {description}\n{_geo_block(geo)}"
+    user_prompt = f"{rules_block}\n\nTitle: {title}\nDescription: {description}\n{_geo_block(geo)}"
     payload = {
         "model": OLLAMA_MODEL,
         "messages": [

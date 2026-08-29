@@ -1,2 +1,4 @@
+#!/usr/bin/env bash
+set -e
 pip install pdm
-pdm install
+pdm install --prod
